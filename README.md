@@ -4,6 +4,8 @@ In this repository lies the implementation of some portfolio selection models as
 ## Development
 To set up the environment to develop, run the following commands:
 ```
+git clone 
 pip install poetry
-
-
+poetry shell
+poetry install
+```
