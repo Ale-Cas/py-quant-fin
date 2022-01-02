@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "portfolio-selection"
+version = "0.1.0"
+description = "Implementation of some portfolio selection models as well as tools to backtest them and visualize allocations"
+authors = ["Ale-Cas <castricaalessio@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+python = "^3.9"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
