@@ -3,6 +3,9 @@ name = "portfolio-selection"
 version = "0.1.0"
 description = "Implementation of some portfolio selection models as well as tools to backtest them and visualize allocations"
 authors = ["Ale-Cas <castricaalessio@gmail.com>"]
+packages = [
+    { include = "source_code" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
