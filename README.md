@@ -1,4 +1,4 @@
-# Introducction
+# Introduction
 In this repository lies the implementation of some portfolio selection models as well as tools to backtest them and visualize allocations.
 
 ## Development
