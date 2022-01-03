@@ -4,8 +4,6 @@ from typing import Optional
 
 import pandas as pd
 
-from source_code.portfolio import Portfolio
-
 
 @dataclasses.dataclass
 class Cash:
@@ -42,7 +40,7 @@ class Asset:
 
     def weight_in_ptf(
         self,
-        portfolio: Portfolio,
+        portfolio,
     ) -> float:
         """Retrieves the weight of the Asset in the specified Portfolio"""
         return portfolio.holdings[self]
