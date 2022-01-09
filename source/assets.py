@@ -1,8 +1,11 @@
 """Abstraction layer for Assets."""
+from __future__ import annotations
 import dataclasses
 from typing import Optional
 
 import pandas as pd
+
+from source.portfolio import Portfolio
 
 
 @dataclasses.dataclass
@@ -40,10 +43,10 @@ class Asset:
 
     def weight_in_ptf(
         self,
-        portfolio,
-    ) -> float:
+        portfolio: Portfolio,
+    ) -> Portfolio:
         """Retrieves the weight of the Asset in the specified Portfolio"""
-        return portfolio.holdings[self]
+        return portfolio
 
 
 class Stock(Asset):
