@@ -32,7 +32,7 @@ class InvestmentUniverse:
     def _get_components_tickers(
         self,
         source: str = "Wikipedia",
-    ) -> List[Asset]:
+    ) -> Optional[List[Asset]]:
         VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
             raise ValueError(
