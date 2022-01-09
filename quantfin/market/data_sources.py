@@ -2,6 +2,7 @@
 The data_sources module provides dataclasses for supported data providers.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 

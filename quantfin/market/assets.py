@@ -1,10 +1,12 @@
 """Abstraction layer for Assets."""
 from __future__ import annotations
-import dataclasses
-from typing import Optional, List, Union
 
-import yfinance as yf
+import dataclasses
+from typing import List, Optional, Union
+from warnings import warn
+
 import pandas as pd
+import yfinance as yf
 
 from quantfin.market.data_sources import DataProviders
 
@@ -34,7 +36,7 @@ class Asset:
         exchange: Optional[str] = None,
         asset_class: Optional[str] = None,
         data_provider: DataProviders = None,
-        prices: pd.DataFrame = None,
+        prices: Optional[pd.DataFrame] = None,
     ) -> None:
         """
         Initialize the Asset.
@@ -107,6 +109,8 @@ class Asset:
         prices
             A pandas DataFrame containing historical prices for specified parameters
         """
+        if self.prices is not None and self.prices.empty() is False:
+            warn("Warning: prices DataFrame has already been defined!")
         if self.data_provider.name == "Yahoo Finance":
             self.prices = yf.Ticker(self.ticker).history(
                 period=period,
