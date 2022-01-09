@@ -3,8 +3,8 @@ The market_data module provides classes for downloading prices from supported da
 """
 
 from __future__ import annotations
-from source.market.investment_universe import InvestmentUniverse
-from source.market.data_sources import DataProviders
+from quantfin.market.investment_universe import InvestmentUniverse
+from quantfin.market.data_sources import DataProviders
 
 
 class MarketData:

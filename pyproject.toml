@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/Ale-Cas/py-quant-fin"
 keywords= ["finance", "portfolio", "optimization", "quant", "investing"]
 packages = [
-    { include = "source" },
+    { include = "quantfin" },
 ]
 
 [tool.poetry.dependencies]
@@ -37,7 +37,7 @@ testpaths = [
 ]
 
 [tool.mypy]
-mypy_path = "source"
+mypy_path = "quantfin"
 ignore_missing_imports = true
 
 [tool.pylint.messages_control]

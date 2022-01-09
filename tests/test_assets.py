@@ -1,7 +1,7 @@
 """
-Tests assets module.
+Test assets module.
 """
-from source.market.assets import Asset, Stock, Bond, ETF
+from quantfin.market.assets import Asset, Stock, Bond, ETF
 
 
 def test_asset_init() -> None:

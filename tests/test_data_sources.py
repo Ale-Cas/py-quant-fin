@@ -1,7 +1,7 @@
 """
-Tests data_sources module.
+Test data_sources module.
 """
-from source.market.data_sources import DataProviders
+from quantfin.market.data_sources import DataProviders
 
 
 def test_data_providers() -> None:

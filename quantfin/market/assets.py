@@ -6,7 +6,7 @@ from typing import Optional, List, Union
 import yfinance as yf
 import pandas as pd
 
-from source.market.data_sources import DataProviders
+from quantfin.market.data_sources import DataProviders
 
 
 @dataclasses.dataclass

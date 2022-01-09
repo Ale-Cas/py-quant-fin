@@ -1,4 +1,7 @@
-from source.portfolio_selection.portfolio import Portfolio
+"""
+Test portfolio module.
+"""
+from quantfin.portfolio_selection.portfolio import Portfolio
 
 
 def test_portfolio() -> None:

@@ -3,6 +3,9 @@ The investment_universe module provides a class to instantiate investment univer
 """
 
 from __future__ import annotations
+from typing import Optional, List
+
+from quantfin.market.assets import Asset
 
 
 class InvestmentUniverse:
@@ -15,6 +18,7 @@ class InvestmentUniverse:
     def __init__(
         self,
         name: str,
+        components: Optional[List[Asset]] = None,
     ) -> None:
         if name in InvestmentUniverse.VALID_UNIVERSE_NAMES:
             self.name = name
@@ -23,3 +27,16 @@ class InvestmentUniverse:
                 f"""Inappropriate universe name, 
                 supported universes are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
             )
+        self.components = components
+
+    def _get_components_tickers(
+        self,
+        source: str = "Wikipedia",
+    ) -> List[Asset]:
+        VALID_SOURCES = {"Wikipedia"}
+        if source not in VALID_SOURCES:
+            raise ValueError(
+                f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
+            )
+
+        return self.components
