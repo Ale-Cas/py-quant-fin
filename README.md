@@ -5,15 +5,15 @@ py-quant-fin is an open-source library which focuses on quantitative finance.
 
 ## Features
 - Data downloading from different data sources, such as: 
-    1. Yahoo Finance
-    2. Alpaca
+    - Yahoo Finance
+    - Alpaca
 
 - Calculation of several risk measures, such as:
-    1. Variance
+    - Variance
 
 - Implementation of several portfolio selection models:
-    1. Portfolio Optimization models based on Risk-Return tradeoff with the above specified risk measures
-    2. Risk Parity (ERC, HRP)
+    - Portfolio Optimization models based on Risk-Return tradeoff with the above specified risk measures
+    - Risk Parity (ERC, HRP)
 
 
 ## Development
