@@ -68,6 +68,12 @@ class Asset:
             )
         self.prices = prices or pd.DataFrame()
 
+    def __repr__(self) -> str:
+        return str(self.name or self.ticker)
+
+    def __hash__(self) -> int:
+        return hash(self.ticker)
+
     def get_prices(
         self,
         period: str = "max",

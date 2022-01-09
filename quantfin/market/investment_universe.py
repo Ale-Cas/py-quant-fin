@@ -28,23 +28,30 @@ class InvestmentUniverse:
         else:
             raise ValueError(
                 f"""Inappropriate universe name, 
-                supported universes are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
+                supported universe names are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
             )
-        self.components = components or set()
+        self.components = components or self._get_components()
 
-    def _get_components_tickers(
+    def _get_components(
         self,
         source: str = "Wikipedia",
-    ) -> Optional[Set[Stock]]:
+    ) -> Set[Stock]:
         VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
             raise ValueError(
                 f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
             )
+        self.components = set()
         if self.name == "SP500":
-            sp500_components: List = pd.read_html(
+            sp500_tickers: List = pd.read_html(
                 "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             )[0]["Symbol"].tolist()
-            for ticker in sp500_components:
+            for ticker in sp500_tickers:
+                self.components.add(Stock(ticker=ticker))
+        if self.name == "NASDAQ100":
+            nasdaq100_tickers = pd.read_html("https://en.wikipedia.org/wiki/Nasdaq-100")[
+                3
+            ]["Ticker"].tolist()
+            for ticker in nasdaq100_tickers:
                 self.components.add(Stock(ticker=ticker))
         return self.components
