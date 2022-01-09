@@ -44,7 +44,7 @@ jobs:
       run:  poetry run pylint -j 0 source
     
     - name: Analysing the code with mypy
-      run: poetry run mypy qapital
+      run: poetry run mypy source
     
     - name: Run unit tests
       run: poetry run pytest

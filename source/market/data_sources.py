@@ -13,3 +13,6 @@ class DataProviders:
     python_wrapper: bool = True
     wrapper_name: str = "yfinance"
     is_official_wrapper: bool = False
+
+    def __hash__(self) -> int:
+        return hash(self.name)
