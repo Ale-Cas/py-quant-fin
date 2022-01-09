@@ -5,7 +5,7 @@ from typing import Optional
 
 import pandas as pd
 
-from source.portfolio import Portfolio
+from source.portfolio_selection.portfolio import Portfolio
 
 
 @dataclasses.dataclass
@@ -27,8 +27,8 @@ class Asset:
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
         asset_class: Optional[str] = None,
-        data_provider: Optional[str] = "Yahoo Finance",
-        prices: pd.DataFrame = pd.DataFrame(),
+        data_provider: Optional[str] = None,
+        prices: pd.DataFrame = None,
     ) -> None:
         """
         Initialize the Asset
@@ -38,8 +38,13 @@ class Asset:
         self.isin = isin
         self.exchange = exchange
         self.asset_class = asset_class
-        self.data_provider = data_provider
-        self.prices = prices
+        _VALID_DATA_PROVIDERS = {"Yahoo Finance", "Alpaca"}
+        self.data_provider = data_provider or "Yahoo Finance"
+        if self.data_provider not in _VALID_DATA_PROVIDERS:
+            raise ValueError(
+                f"The specified data_provider is not supported, use one of: {_VALID_DATA_PROVIDERS}"
+            )
+        self.prices = prices or pd.DataFrame()
 
     def weight_in_ptf(
         self,

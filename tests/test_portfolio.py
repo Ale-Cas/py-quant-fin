@@ -1,4 +1,4 @@
-from source.portfolio import Portfolio
+from source.portfolio_selection.portfolio import Portfolio
 
 
 def test_portfolio() -> None:
