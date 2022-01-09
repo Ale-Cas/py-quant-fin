@@ -33,7 +33,7 @@ class InvestmentUniverse:
         self,
         source: str = "Wikipedia",
     ) -> List[Asset]:
-        VALID_SOURCES = {"Wikipedia"}
+        VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
             raise ValueError(
                 f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
