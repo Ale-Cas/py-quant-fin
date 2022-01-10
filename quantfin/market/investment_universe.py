@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set, Union
 from warnings import warn
 import pandas as pd
 
-from quantfin.market.assets import Stock
+from quantfin.market.assets import Asset
 
 
 class InvestmentUniverse:
@@ -21,8 +21,8 @@ class InvestmentUniverse:
     def __init__(
         self,
         name: str,
-        components: Optional[Set[Stock]] = None,
-        prices: Union[Dict[Stock, pd.DataFrame], pd.DataFrame] = pd.DataFrame(),
+        assets: Optional[Set[Asset]] = None,
+        prices: Optional[Union[Dict[Asset, pd.DataFrame], pd.DataFrame]] = None,
     ) -> None:
         if name in InvestmentUniverse.VALID_UNIVERSE_NAMES:
             self.name = name
@@ -31,38 +31,38 @@ class InvestmentUniverse:
                 f"""Inappropriate universe name, 
                 supported universe names are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
             )
-        self.components = components or self._get_components()
+        self.assets = assets or self._get_assets()
         self.prices = prices
 
-    def _get_components(
+    def _get_assets(
         self,
         source: str = "Wikipedia",
-    ) -> Set[Stock]:
+    ) -> Set[Asset]:
         VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
             raise ValueError(
                 f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
             )
-        self.components = set()
+        self.assets = set()
         if self.name == "SP500":
             sp500_tickers: List = pd.read_html(
                 "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             )[0]["Symbol"].tolist()
             for ticker in sp500_tickers:
-                self.components.add(Stock(ticker=ticker))
+                self.assets.add(Asset(ticker=ticker))
         if self.name == "NASDAQ100":
             nasdaq100_tickers = pd.read_html("https://en.wikipedia.org/wiki/Nasdaq-100")[
                 3
             ]["Ticker"].tolist()
             for ticker in nasdaq100_tickers:
-                self.components.add(Stock(ticker=ticker))
-        return self.components
+                self.assets.add(Asset(ticker=ticker))
+        return self.assets
 
     def get_prices(
         self,
         prices_column: Optional[str] = None,
         **kwargs,
-    ) -> pd.DataFrame:
+    ) -> Union[Dict[Asset, pd.DataFrame], pd.DataFrame]:
         """
         Get historical prices from the data source specified during the initialisation.
 
@@ -81,7 +81,7 @@ class InvestmentUniverse:
                 Download end date string (YYYY-MM-DD) or pd.Timestamp.
                 Default is now
             actions: bool
-                Include columns Dividends & Stock Splits?
+                Include columns Dividends & Asset Splits?
                 Default is True
             prepost: bool
                 Include Pre and Post market data in results?
@@ -96,7 +96,7 @@ class InvestmentUniverse:
         Returns
         -------
         prices
-            A pandas DataFrame containing historical prices for specified parameters
+            A dict[Asset:DataFrame] or a pandas DataFrame containing historical prices for specified parameters
         """
         VALID_PRICE_COLUMNS = {  # pylint: disable=invalid-name
             "Open",
@@ -105,7 +105,7 @@ class InvestmentUniverse:
             "Close",
             "Volume",
             "Dividends",
-            "Stock Splits",
+            "Asset Splits",
         }
         _valid_arguments = {
             "period",
@@ -117,27 +117,19 @@ class InvestmentUniverse:
             "auto_adjust",
             "back_adjust",
         }
-        assert isinstance(self.prices, pd.DataFrame)
-        if self.prices.empty is False:
-            warn("Warning: prices DataFrame has already been defined!")
+        if self.prices:
+            warn("Warning: prices has already been defined!")
 
         if not kwargs:
-            self.prices = pd.concat(
-                [component.get_prices() for component in self.components],
-                axis=1,
-                keys=self.components,
-            )
+            self.prices = {asset.ticker: asset.get_prices() for asset in self.assets}
         else:
             for key in kwargs:
                 if key in _valid_arguments:
-                    self.prices = pd.concat(
-                        [
-                            component.get_prices(**kwargs)
-                            for component in self.components
-                        ],
-                        axis=1,
-                        keys=self.components,
-                    )
+                    self.prices = {
+                        asset.ticker: asset.get_prices(**kwargs) for asset in self.assets
+                    }
+        # now I already have self.prices = {Asset.ticker: pd.DataFrame}
+        # TODO: Take data from the first available date
         if prices_column is not None:
             if prices_column not in VALID_PRICE_COLUMNS:
                 warn(
@@ -146,15 +138,17 @@ class InvestmentUniverse:
                     otherwise will be like the argument was not provided"""
                 )
             else:
-                self.prices = pd.DataFrame()
-                for stock in self.components:
-                    if not kwargs:
-                        self.prices[stock] = stock.get_prices()[prices_column]
-                    for key in kwargs:
-                        if key in _valid_arguments:
-                            self.prices[stock] = stock.get_prices(**kwargs)[
-                                prices_column
-                            ]
+                for asset in self.assets:
+                    min_date = pd.Timestamp("1990-01-01")
+                    if min(self.prices[str(asset)].index) < min_date:
+                        min_date = min(self.prices[str(asset)].index)
+                        min_date_asset = asset
+                self.prices[min_date_asset] = self.prices[str(min_date_asset)][
+                    prices_column
+                ]
+                for asset in self.assets:
+                    self.prices[asset] = self.prices[str(asset)]["Close"]
+
                 return self.prices
 
         return self.prices
