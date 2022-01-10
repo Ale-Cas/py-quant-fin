@@ -1,5 +1,5 @@
 # Python Quantitative Finance Framework
-The py-quant-fin package is an open-source library which offers an integrated framework for quantitative finance. 
+The py-quant-fin library is an open-source quantitative finance framework. 
 
 ![Tests](https://github.com/Ale-Cas/py-quant-fin/actions/workflows/python-package.yml/badge.svg)
 
