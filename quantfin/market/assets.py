@@ -68,18 +68,22 @@ class Asset:
             )
         self.prices = prices or pd.DataFrame()
 
+    def __str__(self) -> str:
+        return str(self.name or self.ticker or "Asset without name nor ticker")
+
     def __repr__(self) -> str:
-        return str(self.name or self.ticker)
+        return str(self.name or self.ticker or "Asset without name nor ticker")
 
     def __hash__(self) -> int:
         return hash(self.ticker)
 
     def get_prices(
         self,
-        period: str = "max",
-        interval: str = "1d",
-        start: Union[str, pd.Timestamp] = None,
-        end: Union[str, pd.Timestamp] = None,
+        period: Optional[str] = None,
+        interval: Optional[str] = None,
+        start: Optional[Union[str, pd.Timestamp]] = None,
+        end: Optional[Union[str, pd.Timestamp]] = None,
+        actions: bool = True,
         prepost_data: bool = False,
         auto_adjust=True,
         back_adjust=False,
@@ -90,39 +94,44 @@ class Asset:
         Parameters
         ----------
         period : str
-                Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-                Either Use period parameter or use start and end
-            interval : str
-                Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-                Intraday data cannot extend last 60 days
-            start: str
-                Download start date string (YYYY-MM-DD) or pd.Timestamp.
-                Default is 1900-01-01
-            end: str
-                Download end date string (YYYY-MM-DD) or pd.Timestamp.
-                Default is now
-            prepost : bool
-                Include Pre and Post market data in results?
-                Default is False
-            auto_adjust: bool
-                Adjust all OHLC automatically? Default is True
-            back_adjust: bool
-                Back-adjusted data to mimic true historical prices (optional)
-
+            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
+            Either Use period parameter or use start and end
+            Default is max
+        interval : str
+            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+            Intraday data cannot extend last 60 days
+            Default is 1 day
+        start: str
+            Download start date string (YYYY-MM-DD) or pd.Timestamp.
+            Default is 1900-01-01
+        end: str
+            Download end date string (YYYY-MM-DD) or pd.Timestamp.
+            Default is now
+        actions: bool
+            Include columns Dividends & Stock Splits?
+            Default is True
+        prepost: bool
+            Include Pre and Post market data in results?
+            Default is False
+        auto_adjust: bool
+            Adjust all OHLC automatically? Default is True
+        back_adjust: bool
+            Back-adjusted data to mimic true historical prices (optional)
 
         Returns
         -------
         prices
             A pandas DataFrame containing historical prices for specified parameters
         """
-        if self.prices is not None and self.prices.empty() is False:
+        if self.prices is not None and self.prices.empty is False:
             warn("Warning: prices DataFrame has already been defined!")
         if self.data_provider.name == "Yahoo Finance":
             self.prices = yf.Ticker(self.ticker).history(
-                period=period,
-                interval=interval,
+                period=period or "max",
+                interval=interval or "1d",
                 start=start,
                 end=end,
+                actions=actions,
                 prepost=prepost_data,
                 auto_adjust=auto_adjust,
                 back_adjust=back_adjust,
