@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Set, Union
 from warnings import warn
 import pandas as pd
+import yfinance as yf
 
 from quantfin.market.assets import Asset
 
@@ -96,7 +97,8 @@ class InvestmentUniverse:
         Returns
         -------
         prices
-            A dict[Asset:DataFrame] or a pandas DataFrame containing historical prices for specified parameters
+            A dict[Asset.ticker:pd.DataFrame] or
+            a pandas DataFrame containing historical prices for specified parameters
         """
         VALID_PRICE_COLUMNS = {  # pylint: disable=invalid-name
             "Open",
@@ -138,17 +140,19 @@ class InvestmentUniverse:
                     otherwise will be like the argument was not provided"""
                 )
             else:
+                temp_prices = pd.DataFrame()
+                min_date = pd.Timestamp("1990-01-01")
                 for asset in self.assets:
-                    min_date = pd.Timestamp("1990-01-01")
                     if min(self.prices[str(asset)].index) < min_date:
                         min_date = min(self.prices[str(asset)].index)
                         min_date_asset = asset
-                self.prices[min_date_asset] = self.prices[str(min_date_asset)][
+                temp_prices[min_date_asset] = self.prices[str(min_date_asset)][
                     prices_column
                 ]
                 for asset in self.assets:
-                    self.prices[asset] = self.prices[str(asset)]["Close"]
-
+                    if asset != min_date_asset:
+                        temp_prices[asset] = self.prices[str(asset)]["Close"]
+                self.prices = temp_prices
                 return self.prices
 
         return self.prices
