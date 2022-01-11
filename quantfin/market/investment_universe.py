@@ -23,7 +23,7 @@ class InvestmentUniverse:
         self,
         name: str,
         assets: Optional[Set[Asset]] = None,
-        prices: Optional[Union[Dict[Asset, pd.DataFrame], pd.DataFrame]] = None,
+        prices: pd.DataFrame = None,
     ) -> None:
         if name in InvestmentUniverse.VALID_UNIVERSE_NAMES:
             self.name = name
@@ -32,13 +32,26 @@ class InvestmentUniverse:
                 f"""Inappropriate universe name, 
                 supported universe names are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
             )
-        self.assets = assets or self._get_assets()
-        self.prices = prices
+        self.assets = assets or self.get_assets()
+        self.prices = prices or pd.DataFrame()
 
-    def _get_assets(
+    def get_assets(
         self,
         source: str = "Wikipedia",
     ) -> Set[Asset]:
+        """
+        Get historical prices from the data source specified during the initialisation.
+
+        Parameters
+        ----------
+        source : str
+                Valid sources: Wikipedia
+
+        Returns
+        -------
+        self.assets
+            A set[Asset]
+        """
         VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
             raise ValueError(
@@ -69,36 +82,49 @@ class InvestmentUniverse:
 
         Parameters
         ----------
+        prices_column: Optional[str]
+            Valid columns: "Open","High","Low","Close","Volume"
+            If you want to see also "Dividends","Asset Splits"
+            Please put actions=True
+        tickers : str, list
+            List of tickers to download
         period : str
-                Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-                Either Use period parameter or use start and end
-            interval : str
-                Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-                Intraday data cannot extend last 60 days
-            start: str
-                Download start date string (YYYY-MM-DD) or pd.Timestamp.
-                Default is 1900-01-01
-            end: str
-                Download end date string (YYYY-MM-DD) or pd.Timestamp.
-                Default is now
-            actions: bool
-                Include columns Dividends & Asset Splits?
-                Default is True
-            prepost: bool
-                Include Pre and Post market data in results?
-                Default is False
-            auto_adjust: bool
-                Adjust all OHLC automatically? Default is True
-            back_adjust: bool
-                Back-adjusted data to mimic true historical prices (optional)
-            prices_column: optional[str]
-                Column from stock prices DataFrame that we want to retrieve
+            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
+            Either Use period parameter or use start and end
+        interval : str
+            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+            Intraday data cannot extend last 60 days
+        start: str
+            Download start date string (YYYY-MM-DD) or _datetime.
+            Default is 1900-01-01
+        end: str
+            Download end date string (YYYY-MM-DD) or _datetime.
+            Default is now
+        group_by : str
+            Group by 'ticker' or 'column' (default)
+        prepost : bool
+            Include Pre and Post market data in results?
+            Default is False
+        auto_adjust: bool
+            Adjust all OHLC automatically? Default is True
+        actions: bool
+            Download dividend + stock splits data. Default is False
+        threads: bool / int
+            How many threads to use for mass downloading. Default is True
+        proxy: str
+            Optional. Proxy server URL scheme. Default is None
+        rounding: bool
+            Optional. Round values to 2 decimal places?
+        show_errors: bool
+            Optional. Doesn't print errors if True
+        timeout: None or float
+            If not None stops waiting for a response after given number of
+            seconds. (Can also be a fraction of a second e.g. 0.01)
 
         Returns
         -------
         prices
-            A dict[Asset.ticker:pd.DataFrame] or
-            a pandas DataFrame containing historical prices for specified parameters
+            A pd.DataFrame containing historical prices for the specified parameters
         """
         VALID_PRICE_COLUMNS = {  # pylint: disable=invalid-name
             "Open",
@@ -110,28 +136,42 @@ class InvestmentUniverse:
             "Asset Splits",
         }
         _valid_arguments = {
+            "tickers",
             "period",
             "interval",
             "start",
             "end",
+            "group_by",
             "actions",
-            "prepost_data",
+            "prepost",
             "auto_adjust",
-            "back_adjust",
+            "proxy",
+            "rounding",
+            "show_errors",
+            "timeout",
         }
-        if self.prices:
+        if not self.prices.empty:
             warn("Warning: prices has already been defined!")
 
         if not kwargs:
-            self.prices = {asset.ticker: asset.get_prices() for asset in self.assets}
+            self.prices = yf.download(
+                tickers=[str(asset) for asset in self.assets],
+                group_by="Ticker",
+                period="max",
+                auto_adjust=True,
+            )
         else:
             for key in kwargs:
                 if key in _valid_arguments:
-                    self.prices = {
-                        asset.ticker: asset.get_prices(**kwargs) for asset in self.assets
-                    }
-        # now I already have self.prices = {Asset.ticker: pd.DataFrame}
-        # TODO: Take data from the first available date
+                    self.prices = yf.download(
+                        tickers=[str(asset) for asset in self.assets],
+                        **kwargs,
+                    )
+                else:
+                    message = f"""Warning: Please provide a valid keyword, 
+                         valid ones are: {_valid_arguments}, 
+                         otherwise will be ignored"""
+                    warn(message=message)
         if prices_column is not None:
             if prices_column not in VALID_PRICE_COLUMNS:
                 warn(
@@ -140,19 +180,6 @@ class InvestmentUniverse:
                     otherwise will be like the argument was not provided"""
                 )
             else:
-                temp_prices = pd.DataFrame()
-                min_date = pd.Timestamp("1990-01-01")
-                for asset in self.assets:
-                    if min(self.prices[str(asset)].index) < min_date:
-                        min_date = min(self.prices[str(asset)].index)
-                        min_date_asset = asset
-                temp_prices[min_date_asset] = self.prices[str(min_date_asset)][
-                    prices_column
-                ]
-                for asset in self.assets:
-                    if asset != min_date_asset:
-                        temp_prices[asset] = self.prices[str(asset)]["Close"]
-                self.prices = temp_prices
-                return self.prices
+                self.prices = self.prices.xs(prices_column, level=1, axis=1)
 
         return self.prices
