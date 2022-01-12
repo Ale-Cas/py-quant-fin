@@ -2,31 +2,26 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Union
+from abc import ABC, abstractmethod
+from typing import Optional
 from warnings import warn
 
 import pandas as pd
 import yfinance as yf
-
-from quantfin.market.data_sources import DataProviders
 
 
 @dataclasses.dataclass
 class Cash:
     """This class represents Cash."""
 
+    value: float = 1.0
     currency: str = "EUR"
 
 
-class Asset:
+class Asset(ABC):
     """
-    This class represent a single asset.
+    This is an abstact class that represents a single asset.
     """
-
-    _VALID_ASSET_CLASSES = {"Equity", "Fixed-Income", "Fund"}
-    _VALID_DATA_PROVIDERS = {
-        DataProviders(name="Yahoo Finance"),
-    }
 
     def __init__(
         self,
@@ -35,7 +30,6 @@ class Asset:
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
         asset_class: Optional[str] = None,
-        data_provider: DataProviders = None,
         prices: Optional[pd.DataFrame] = None,
     ) -> None:
         """
@@ -45,28 +39,8 @@ class Asset:
         self.ticker = ticker
         self.isin = isin
         self.exchange = exchange
-
-        if asset_class is None:
-            # The default asset class is Equity
-            self.asset_class = "Equity"
-        elif asset_class in Asset._VALID_ASSET_CLASSES:
-            self.asset_class = asset_class
-        else:
-            raise ValueError(
-                f"The specified asset_class is not valid, use one of: {Asset._VALID_ASSET_CLASSES}"
-            )
-
-        if data_provider is None:
-            # The default data provider is Yahoo Finance
-            self.data_provider = DataProviders(name="Yahoo Finance")
-        elif data_provider in Asset._VALID_DATA_PROVIDERS:
-            self.data_provider = data_provider
-        else:
-            raise ValueError(
-                f"""The specified data_provider is not supported, 
-                use one of: {Asset._VALID_DATA_PROVIDERS}"""
-            )
-        self.prices = prices or pd.DataFrame()
+        self.asset_class = asset_class
+        self.prices = prices
 
     def __str__(self) -> str:
         return str(self.name or self.ticker or "Asset without name nor ticker")
@@ -77,73 +51,36 @@ class Asset:
     def __hash__(self) -> int:
         return hash(self.ticker)
 
+    @abstractmethod
+    def is_in_index(self):
+        """Checks if an asset is part of the specified index"""
+        raise NotImplementedError("This is an abstract method")
+
+    @abstractmethod
+    def is_in_universe(self):
+        """Checks if an asset is part of the specified InvestmentUniverse"""
+        raise NotImplementedError("This is an abstract method")
+
+    @abstractmethod
+    def is_in_portfolio(self):
+        """Checks if an asset is part of the specified Portfolio"""
+        raise NotImplementedError("This is an abstract method")
+
+    @abstractmethod
     def get_prices(
         self,
-        period: Optional[str] = None,
-        interval: Optional[str] = None,
-        start: Optional[Union[str, pd.Timestamp]] = None,
-        end: Optional[Union[str, pd.Timestamp]] = None,
-        actions: bool = True,
-        prepost_data: bool = False,
-        auto_adjust=True,
-        back_adjust=False,
-    ) -> pd.DataFrame:
+        data_source: str,
+        **kwargs,
+    ):
         """
-        Get historical prices from the data source specified during the initialisation.
-
-        Parameters
-        ----------
-        period : str
-            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-            Either Use period parameter or use start and end
-            Default is max
-        interval : str
-            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-            Intraday data cannot extend last 60 days
-            Default is 1 day
-        start: str
-            Download start date string (YYYY-MM-DD) or pd.Timestamp.
-            Default is 1900-01-01
-        end: str
-            Download end date string (YYYY-MM-DD) or pd.Timestamp.
-            Default is now
-        actions: bool
-            Include columns Dividends & Stock Splits?
-            Default is True
-        prepost: bool
-            Include Pre and Post market data in results?
-            Default is False
-        auto_adjust: bool
-            Adjust all OHLC automatically? Default is True
-        back_adjust: bool
-            Back-adjusted data to mimic true historical prices (optional)
-
-        Returns
-        -------
-        prices
-            A pandas DataFrame containing historical prices for specified parameters
+        Get historical prices from the specified data source.
         """
-        if self.prices is not None and self.prices.empty is False:
-            warn("Warning: prices DataFrame has already been defined!")
-        if self.data_provider.name == "Yahoo Finance":
-            self.prices = yf.Ticker(self.ticker).history(
-                period=period or "max",
-                interval=interval or "1d",
-                start=start,
-                end=end,
-                actions=actions,
-                prepost=prepost_data,
-                auto_adjust=auto_adjust,
-                back_adjust=back_adjust,
-            )
-        return self.prices
+        raise NotImplementedError("This is an abstract method")
 
-    # def weight_in_ptf(
-    #     self,
-    #     portfolio: Portfolio,
-    # ) -> Portfolio:
-    #     """Retrieves the weight of the Asset in the specified Portfolio"""
-    #     return portfolio
+    @abstractmethod
+    def get_weight_in_portfolio(self):
+        """Retrieves the weight of the Asset in the specified Portfolio"""
+        raise NotImplementedError("This is an abstract method")
 
 
 class Stock(Asset):
@@ -157,8 +94,9 @@ class Stock(Asset):
         ticker: Optional[str] = None,
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
-        data_provider: DataProviders = None,
-        prices: pd.DataFrame = None,
+        prices: Optional[pd.DataFrame] = None,
+        sector: Optional[str] = None,
+        industry: Optional[str] = None,
     ) -> None:
         """
         Initialize the Stock
@@ -169,66 +107,67 @@ class Stock(Asset):
             isin,
             exchange,
             asset_class="Equity",
-            data_provider=data_provider,
             prices=prices,
         )
+        self.sector = sector
+        self.industry = industry
 
+    def __str__(self) -> str:
+        return str(self.name or self.ticker or "Asset without name nor ticker")
 
-class Bond(Asset):
-    """
-    This class represent a single Bond.
-    """
+    def __repr__(self) -> str:
+        return str(self.name or self.ticker or "Asset without name nor ticker")
 
-    def __init__(
+    def __hash__(self) -> int:
+        return hash(self.ticker)
+
+    def get_prices(
         self,
-        name: Optional[str] = None,
-        ticker: Optional[str] = None,
-        isin: Optional[str] = None,  # International Securities Identification Number
-        exchange: Optional[str] = None,
-        data_provider: DataProviders = None,
-        prices: pd.DataFrame = None,
-    ) -> None:
+        data_source: str = "Yahoo Finance",
+        **kwargs,
+    ) -> pd.DataFrame:
         """
-        Initialize the Bond
-        """
-        super().__init__(
-            name,
-            ticker,
-            isin,
-            exchange,
-            asset_class="Fixed-Income",
-            data_provider=data_provider,
-            prices=prices,
-        )
+        Get historical prices from the specified data source.
 
+        Parameters
+        ----------
+        data_source: str
+            Valid data sources: Yahoo Finance (default)
+        You can specify additional parameters, depending on the data_source
 
-class ETF(Asset):
-    """
-    This class represent a single Exchanged Traded Fund.
-    """
+        Returns
+        -------
+        prices
+            A pandas DataFrame containing historical prices for specified parameters
+        """
+        if data_source == "Yahoo Finance":
 
-    def __init__(
-        self,
-        name: Optional[str] = None,
-        ticker: Optional[str] = None,
-        isin: Optional[str] = None,  # International Securities Identification Number
-        exchange: Optional[str] = None,
-        data_provider: Optional[DataProviders] = None,
-        prices: pd.DataFrame = None,
-        ref_index: Optional[str] = None,
-        components: List[Union[Stock, Bond]] = None,
-    ) -> None:
-        """
-        Initialize the ETF
-        """
-        super().__init__(
-            name,
-            ticker,
-            isin,
-            exchange,
-            asset_class="Fund",
-            data_provider=data_provider,
-            prices=prices,
-        )
-        self.ref_index = ref_index
-        self.components = components
+            if self.prices is not None:
+                warn("Warning: prices DataFrame has already been defined!")
+
+            if not kwargs:
+                self.prices = yf.Ticker(self.ticker).history(
+                    period="max",
+                    interval="1d",
+                )
+            else:
+                self.prices = yf.Ticker(self.ticker).history(**kwargs)
+        else:
+            raise NotImplementedError
+        return self.prices
+
+    def is_in_index(self):
+        """Checks if an asset is part of the specified index"""
+        raise NotImplementedError("Not yet implemented")
+
+    def is_in_universe(self):
+        """Checks if an asset is part of the specified InvestmentUniverse"""
+        raise NotImplementedError("Not yet implemented")
+
+    def is_in_portfolio(self):
+        """Checks if an asset is part of the specified Portfolio"""
+        raise NotImplementedError("Not yet implemented")
+
+    def get_weight_in_portfolio(self):
+        """Retrieves the weight of the Asset in the specified Portfolio"""
+        raise NotImplementedError("Not yet implemented")
