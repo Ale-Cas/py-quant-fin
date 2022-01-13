@@ -46,6 +46,9 @@ class IAsset(ABC):
     def __hash__(self) -> int:
         return hash(self.ticker)
 
+    def __repr__(self) -> str:
+        return str(self.name or self.ticker or "Asset without name nor ticker")
+
     @abstractmethod
     def is_in_index(self):
         """Checks if an asset is part of the specified index"""
@@ -73,6 +76,15 @@ class Cash(IAsset):
 
     value: float = 1.0
     currency: str = "EUR"
+
+    def __hash__(self) -> int:
+        return hash(self.currency)
+
+    def __str__(self) -> str:
+        return "Cash"
+
+    def __repr__(self) -> str:
+        return "Cash"
 
     def is_in_index(self):
         """Checks if an asset is part of the specified index"""

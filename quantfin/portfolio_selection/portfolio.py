@@ -14,15 +14,22 @@ class Portfolio:
 
     def __init__(
         self,
+        name: Optional[str] = None,
+        long_only: Optional[bool] = None,
         holdings: Optional[Dict[assets.IAsset, float]] = None,
     ):
+        self.name = name
+        self.long_only: bool = long_only or True
         self.holdings: Dict[assets.IAsset, float] = holdings or {
             assets.Cash(): assets.Cash.value
         }
-        sum_of_weights = float(sum(self.holdings.values()))
+        if assets.Cash() not in self.holdings:
+            # if cash is not specified in the holdings automatically compute it
+            cash = assets.Cash(value=np.abs(1.0 - float(sum(self.holdings.values()))))
+            self.holdings[cash] = cash.value
         assert (
-            np.abs(sum_of_weights - 1.0) < 1e-4
-        ), f"Holding weights should sum to one, not {sum_of_weights}."
+            float(sum(self.holdings.values())) == 1.0
+        ), f"Holding weights should sum to one, not {float(sum(self.holdings.values()))}."
 
     @property
     def cash(self) -> float:
