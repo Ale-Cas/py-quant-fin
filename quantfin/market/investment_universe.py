@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Set, Union
 from warnings import warn
+
 import pandas as pd
 import yfinance as yf
 
-from quantfin.market.assets import Asset
+from quantfin.market.assets import Stock
 
 
 class InvestmentUniverse:
@@ -22,7 +23,7 @@ class InvestmentUniverse:
     def __init__(
         self,
         name: str,
-        assets: Optional[Set[Asset]] = None,
+        assets: Optional[Set[Stock]] = None,
         prices: pd.DataFrame = None,
     ) -> None:
         if name in InvestmentUniverse.VALID_UNIVERSE_NAMES:
@@ -38,7 +39,7 @@ class InvestmentUniverse:
     def get_assets(
         self,
         source: str = "Wikipedia",
-    ) -> Set[Asset]:
+    ) -> Set[Stock]:
         """
         Get historical prices from the data source specified during the initialisation.
 
@@ -50,7 +51,7 @@ class InvestmentUniverse:
         Returns
         -------
         self.assets
-            A set[Asset]
+            A set[Stock]
         """
         VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
         if source not in VALID_SOURCES:
@@ -63,20 +64,20 @@ class InvestmentUniverse:
                 "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             )[0]["Symbol"].tolist()
             for ticker in sp500_tickers:
-                self.assets.add(Asset(ticker=ticker))
+                self.assets.add(Stock(ticker=ticker))
         if self.name == "NASDAQ100":
             nasdaq100_tickers = pd.read_html("https://en.wikipedia.org/wiki/Nasdaq-100")[
                 3
             ]["Ticker"].tolist()
             for ticker in nasdaq100_tickers:
-                self.assets.add(Asset(ticker=ticker))
+                self.assets.add(Stock(ticker=ticker))
         return self.assets
 
     def get_prices(
         self,
         prices_column: Optional[str] = None,
         **kwargs,
-    ) -> Union[Dict[Asset, pd.DataFrame], pd.DataFrame]:
+    ) -> Union[Dict[Stock, pd.DataFrame], pd.DataFrame]:
         """
         Get historical prices from the data source specified during the initialisation.
 
@@ -84,7 +85,7 @@ class InvestmentUniverse:
         ----------
         prices_column: Optional[str]
             Valid columns: "Open","High","Low","Close","Volume"
-            If you want to see also "Dividends","Asset Splits"
+            If you want to see also "Dividends","Stock Splits"
             Please put actions=True
         tickers : str, list
             List of tickers to download
@@ -133,7 +134,7 @@ class InvestmentUniverse:
             "Close",
             "Volume",
             "Dividends",
-            "Asset Splits",
+            "Stock Splits",
         }
         _valid_arguments = {
             "tickers",
