@@ -1,16 +1,17 @@
 """Abstraction layer for Assets."""
 from __future__ import annotations
 
-import dataclasses
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Optional
-from warnings import warn
+from typing import TYPE_CHECKING, Optional
 
 import pandas as pd
-import yfinance as yf
+
+if TYPE_CHECKING:
+    from quantfin.market.data_download import DataProviders
 
 
-@dataclasses.dataclass
+@dataclass
 class Cash:
     """This class represents Cash."""
 
@@ -18,9 +19,9 @@ class Cash:
     currency: str = "EUR"
 
 
-class Asset(ABC):
+class IAsset(ABC):
     """
-    This is an abstact class that represents a single asset.
+    This is an interface (abstact class) that represents a single asset.
     """
 
     def __init__(
@@ -30,6 +31,7 @@ class Asset(ABC):
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
         asset_class: Optional[str] = None,
+        data_provider: Optional[DataProviders] = None, 
         prices: Optional[pd.DataFrame] = None,
     ) -> None:
         """
@@ -40,6 +42,7 @@ class Asset(ABC):
         self.isin = isin
         self.exchange = exchange
         self.asset_class = asset_class
+        self.data_provider = data_provider
         self.prices = prices
 
     def __str__(self) -> str:
@@ -67,23 +70,12 @@ class Asset(ABC):
         raise NotImplementedError("This is an abstract method")
 
     @abstractmethod
-    def get_prices(
-        self,
-        data_source: str,
-        **kwargs,
-    ):
-        """
-        Get historical prices from the specified data source.
-        """
-        raise NotImplementedError("This is an abstract method")
-
-    @abstractmethod
     def get_weight_in_portfolio(self):
         """Retrieves the weight of the Asset in the specified Portfolio"""
         raise NotImplementedError("This is an abstract method")
 
 
-class Stock(Asset):
+class Stock(IAsset):
     """
     This class represent a single Stock.
     """
@@ -94,6 +86,7 @@ class Stock(Asset):
         ticker: Optional[str] = None,
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
+        data_provider: Optional[DataProviders] = None,
         prices: Optional[pd.DataFrame] = None,
         sector: Optional[str] = None,
         industry: Optional[str] = None,
@@ -107,6 +100,7 @@ class Stock(Asset):
             isin,
             exchange,
             asset_class="Equity",
+            data_provider=data_provider,
             prices=prices,
         )
         self.sector = sector
@@ -120,41 +114,6 @@ class Stock(Asset):
 
     def __hash__(self) -> int:
         return hash(self.ticker)
-
-    def get_prices(
-        self,
-        data_source: str = "Yahoo Finance",
-        **kwargs,
-    ) -> pd.DataFrame:
-        """
-        Get historical prices from the specified data source.
-
-        Parameters
-        ----------
-        data_source: str
-            Valid data sources: Yahoo Finance (default)
-        You can specify additional parameters, depending on the data_source
-
-        Returns
-        -------
-        prices
-            A pandas DataFrame containing historical prices for specified parameters
-        """
-        if data_source == "Yahoo Finance":
-
-            if self.prices is not None:
-                warn("Warning: prices DataFrame has already been defined!")
-
-            if not kwargs:
-                self.prices = yf.Ticker(self.ticker).history(
-                    period="max",
-                    interval="1d",
-                )
-            else:
-                self.prices = yf.Ticker(self.ticker).history(**kwargs)
-        else:
-            raise NotImplementedError
-        return self.prices
 
     def is_in_index(self):
         """Checks if an asset is part of the specified index"""
