@@ -14,13 +14,11 @@ class Portfolio:
 
     def __init__(
         self,
-        holdings: Optional[
-            Union[Dict[assets.Cash, float], Dict[assets.IAsset, float]]
-        ] = None,
+        holdings: Optional[Dict[assets.IAsset, float]] = None,
     ):
-        self.holdings: Union[
-            Dict[assets.Cash, float], Dict[assets.IAsset, float]
-        ] = holdings or {assets.Cash: assets.Cash.value}
+        self.holdings: Dict[assets.IAsset, float] = holdings or {
+            assets.Cash(): assets.Cash.value
+        }
         sum_of_weights = float(sum(self.holdings.values()))
         assert (
             np.abs(sum_of_weights - 1.0) < 1e-4
@@ -34,13 +32,13 @@ class Portfolio:
     def instruments(self) -> Set[Union[assets.Cash, assets.IAsset]]:
         """List of portfolio instruments."""
         return {
-            x
-            for x in self.holdings.keys()
-            if (x != ("$" + self.base_currency) and self.holdings[x] != 0.0)
+            asset
+            for asset in self.holdings.keys()
+            if (isinstance(asset, assets.IAsset) and self.holdings[asset] != 0.0)
         }
 
     @property
-    def len_instruments(self) -> Set[Union[assets.Cash, assets.IAsset]]:
+    def len_instruments(self) -> int:
         """Number of portfolio instruments."""
         return len(self.instruments)
 
