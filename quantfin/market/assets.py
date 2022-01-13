@@ -11,14 +11,6 @@ if TYPE_CHECKING:
     from quantfin.market.data_download import DataProviders
 
 
-@dataclass
-class Cash:
-    """This class represents Cash."""
-
-    value: float = 1.0
-    currency: str = "EUR"
-
-
 class IAsset(ABC):
     """
     This is an interface (abstact class) that represents a single asset.
@@ -31,7 +23,7 @@ class IAsset(ABC):
         isin: Optional[str] = None,  # International Securities Identification Number
         exchange: Optional[str] = None,
         asset_class: Optional[str] = None,
-        data_provider: Optional[DataProviders] = None, 
+        data_provider: Optional[DataProviders] = None,
         prices: Optional[pd.DataFrame] = None,
     ) -> None:
         """
@@ -73,6 +65,30 @@ class IAsset(ABC):
     def get_weight_in_portfolio(self):
         """Retrieves the weight of the Asset in the specified Portfolio"""
         raise NotImplementedError("This is an abstract method")
+
+
+@dataclass
+class Cash(IAsset):
+    """This class represents Cash."""
+
+    value: float = 1.0
+    currency: str = "EUR"
+
+    def is_in_index(self):
+        """Checks if an asset is part of the specified index"""
+        raise NotImplementedError("Not yet implemented")
+
+    def is_in_universe(self):
+        """Checks if an asset is part of the specified InvestmentUniverse"""
+        raise NotImplementedError("Not yet implemented")
+
+    def is_in_portfolio(self):
+        """Checks if an asset is part of the specified Portfolio"""
+        raise NotImplementedError("Not yet implemented")
+
+    def get_weight_in_portfolio(self):
+        """Retrieves the weight of the Asset in the specified Portfolio"""
+        raise NotImplementedError("Not yet implemented")
 
 
 class Stock(IAsset):
