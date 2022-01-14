@@ -5,9 +5,8 @@ to download market data from different data providers.
 from abc import ABC, abstractmethod
 from enum import Enum
 
-import yfinance as yf
-
 import pandas as pd
+import yfinance as yf
 
 
 class DataProviders(Enum):

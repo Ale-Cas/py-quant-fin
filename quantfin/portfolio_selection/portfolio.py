@@ -3,8 +3,9 @@ Created on Jan 3, 2022
 @author: AC
 """
 
+from typing import Dict, Optional, Set, Union
+
 import numpy as np
-from typing import Optional, Dict, Set, Union
 
 from quantfin.market import assets
 

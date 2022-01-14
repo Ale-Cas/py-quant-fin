@@ -1,8 +1,8 @@
 """Abstraction layer for Assets."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 import pandas as pd
@@ -16,6 +16,7 @@ class IAsset(ABC):
     This is an interface (abstact class) that represents a single asset.
     """
 
+    @abstractmethod
     def __init__(
         self,
         name: Optional[str] = None,
@@ -45,9 +46,6 @@ class IAsset(ABC):
 
     def __hash__(self) -> int:
         return hash(self.ticker)
-
-    def __repr__(self) -> str:
-        return str(self.name or self.ticker or "Asset without name nor ticker")
 
     @abstractmethod
     def is_in_index(self):
