@@ -1,8 +1,8 @@
 """Abstraction layer for Assets."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 import pandas as pd
@@ -73,6 +73,15 @@ class Cash(IAsset):
 
     value: float = 1.0
     currency: str = "EUR"
+
+    def __hash__(self) -> int:
+        return hash(self.currency)
+
+    def __str__(self) -> str:
+        return "Cash"
+
+    def __repr__(self) -> str:
+        return "Cash"
 
     def is_in_index(self):
         """Checks if an asset is part of the specified index"""
