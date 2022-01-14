@@ -16,7 +16,6 @@ class IAsset(ABC):
     This is an interface (abstact class) that represents a single asset.
     """
 
-    @abstractmethod
     def __init__(
         self,
         name: Optional[str] = None,
