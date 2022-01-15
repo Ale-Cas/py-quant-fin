@@ -1,10 +1,11 @@
 """Module to implement optimization problems."""
 
-from typing import Any
+from typing import Any, Dict
 import numpy as np
 import pandas as pd
 import cvxopt as opt
 
+from quantfin.market import assets
 from quantfin.portfolio_selection.portfolio_optimization import objective_functions
 from quantfin.portfolio_selection import portfolio
 
@@ -43,9 +44,12 @@ class QuadraticProgram(OptimizationProblem):
             b = opt.matrix(1.0)
 
             solution = opt.solvers.qp(P=cov_matrix, q=q, G=G, h=h, A=A, b=b)
-            weights: np.array = np.array(solution["x"]).reshape(n)
+            weights = np.array(solution["x"]).reshape(n)
             weights[weights < 1e-4] = 0.0
-            opt_holdings = dict(zip(covariance_df.columns, weights))
+            stocks = []
+            for ticker in covariance_df.columns:
+                stocks.append(assets.Stock(ticker=ticker))
+            opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
             return portfolio.OptimalPortfolio(
                 name=objective_functions.ObjectiveFunctionType.MIN_VARIANCE,
                 holdings=opt_holdings,
