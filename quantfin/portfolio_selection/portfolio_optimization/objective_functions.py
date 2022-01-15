@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import cvxopt as opt
 
 
 class ObjectiveFunctionType(str, Enum):
@@ -49,8 +50,9 @@ class CovarianceMatrix(IObjectiveFunction):
         except np.linalg.LinAlgError:
             return False
 
-    def __call__(self) -> pd.DataFrame:
+    def __call__(self) -> opt.matrix:
+        """Returns the objective as cvxopt.qp wants it."""
         if self._is_positive_semidefinite:
-            return self.returns.cov()
+            return opt.matrix(2 * self.returns.cov().values)
         else:
             raise ValueError("The returns matrix is not positive semidefinite!")

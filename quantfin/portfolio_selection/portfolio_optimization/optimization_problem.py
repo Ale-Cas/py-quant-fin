@@ -1,13 +1,14 @@
 """Module to implement optimization problems."""
 
 from typing import Any, Dict
+
+import cvxopt as opt
 import numpy as np
 import pandas as pd
-import cvxopt as opt
 
 from quantfin.market import assets
-from quantfin.portfolio_selection.portfolio_optimization import objective_functions
 from quantfin.portfolio_selection import portfolio
+from quantfin.portfolio_selection.portfolio_optimization import objective_functions
 
 
 class OptimizationProblem:
@@ -34,12 +35,14 @@ class QuadraticProgram(OptimizationProblem):
         """Solves the optimization problem."""
         if isinstance(self.obj_fun, objective_functions.CovarianceMatrix):
             covariance_df: pd.DataFrame = self.obj_fun()
-            cov_matrix = opt.matrix(covariance_df.values)
+            cov_matrix = opt.matrix(2 * covariance_df.values)
             n: int = len(covariance_df.columns)
             # TODO: This should be in the constraint class or in another method:
             q = opt.matrix(0.0, (n, 1))
+            # Inequality constraint G * x <= h
             G = -opt.matrix(np.eye(n))  # negative n x n identity matrix
             h = opt.matrix(0.0, (n, 1))
+            # Equality constraint A * x = b
             A = opt.matrix(1.0, (1, n))
             b = opt.matrix(1.0)
 
