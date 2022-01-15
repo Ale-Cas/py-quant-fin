@@ -17,10 +17,6 @@ class IConstraint(ABC):
     """This is an abstract interface to build multiple kinds of constraints."""
 
     @abstractmethod
-    def __init__(self, constraint_type: ConstraintType) -> None:
-        self.constraint_type = constraint_type
-
-    @abstractmethod
     def __call__(
         self,
         num_assets: int,
@@ -32,15 +28,10 @@ class IConstraint(ABC):
 class Budget(IConstraint):
     """This class makes portfolio weights sum to one."""
 
-    def __init__(
-        self,
-    ) -> None:
-        super().__init__(constraint_type=ConstraintType.BUDGET)
-
     def __call__(
         self,
         num_assets: int,
-        num_auxiliary_variables: int = 0,
+        # num_auxiliary_variables: int = 0,
     ) -> Dict[str, opt.matrix]:
         """Returns the constraint to make weghts sum to one
         as an equality constraint
@@ -67,13 +58,10 @@ class Budget(IConstraint):
 class NoShortSelling(IConstraint):
     """This class makes portfolio weights positive."""
 
-    def __init__(self) -> None:
-        super().__init__(constraint_type=ConstraintType.NO_SHORTSELLING)
-
     def __call__(
         self,
         num_assets: int,
-        num_auxiliary_variables: int = 0,
+        # num_auxiliary_variables: int = 0,
     ) -> Dict[str, opt.matrix]:
         """Returns the no shortselling constraint as an inequality constraint
         with a dictionary of cvxopt matrices.
@@ -107,8 +95,10 @@ class Constraints:
         self.num_assets = num_assets
         self.num_auxiliary_variables = num_auxiliary_variables
 
-    def __call__(self) -> None:
-        pass
+    def __call__(self) -> Dict[str, opt.matrix]:
+        for con in self.constraints_list:
+            if con == ConstraintType.BUDGET:
+                budget_constraint = Budget(self.num_assets)
 
     def add_constraint(self, constraint_type: ConstraintType) -> None:
         self.constraints_list.append(constraint_type)
