@@ -33,10 +33,6 @@ class Portfolio:
         ), f"Holding weights should sum to one, not {float(sum(self.holdings.values()))}."
 
     @property
-    def cash(self) -> float:
-        raise NotImplementedError
-
-    @property
     def instruments(self) -> Set[Union[assets.Cash, assets.IAsset]]:
         """List of portfolio instruments."""
         return {
@@ -49,6 +45,15 @@ class Portfolio:
     def len_instruments(self) -> int:
         """Number of portfolio instruments."""
         return len(self.instruments)
+
+    @property
+    def cash(self) -> Dict[str, float]:
+        for asset in self.holdings.keys():
+            if isinstance(asset, assets.Cash):
+                cash = {asset.currency: asset.value}
+            else:
+                cash = {assets.Cash.currency: 0.0}
+        return cash
 
 
 class OptimalPortfolio(Portfolio):
