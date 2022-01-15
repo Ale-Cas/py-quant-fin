@@ -1,5 +1,5 @@
 """
-Created on Jen 13, 2022
+Created on Jan 13, 2022
 @author: AC
 
 This module provides the streamlit UI to download customized stock data.
