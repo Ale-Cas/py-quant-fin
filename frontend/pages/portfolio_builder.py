@@ -11,8 +11,10 @@ import streamlit as st
 
 from quantfin.market.assets import AssetClasses, Indexes
 from quantfin.portfolio_selection.strategies import PortfolioStrategies
-from quantfin.portfolio_selection.portfolio_optimization.objective_functions import (
-    ObjectiveFunctions,
+from quantfin.portfolio_selection.portfolio_optimization import (
+    ConstraintType,
+    ObjectiveType,
+    OptimizationProblem,
 )
 
 title = "Portfolio Builder"
@@ -62,15 +64,15 @@ def app() -> None:
     if ptf_strategy == "Portfolio Optimization":
         objective_functions = st.multiselect(
             label="Choose the optimization model",
-            default=ObjectiveFunctions.VARIANCE.value,
-            options=ObjectiveFunctions.list(),
+            default=ObjectiveType.VARIANCE.value,
+            options=ObjectiveType.list(),
         )
         # min_max = st.radio(
         #     label="Choose wether to minimize or maximize the objective function",
         #     options=("Min", "Max"),
         # )
         with st.expander("See explanation"):
-            if ObjectiveFunctions.VARIANCE.value in objective_functions:
+            if ObjectiveType.VARIANCE.value in objective_functions:
                 st.write(
                     """
                 The Portfolio Variance measures the squared distance of portfolio returns from the mean.
@@ -90,8 +92,8 @@ def app() -> None:
         )
         constraints = st.sidebar.multiselect(
             label="Choose the constraints you prefer",
-            default=("Budget", "Long-only"),
-            options=("Budget", "Long-only", "Max Instrument Weight"),
+            default=ConstraintType.NO_SHORTSELLING.value,
+            options=ConstraintType.list(),
         )
         if "Max Instrument Weight" in constraints:
             _for_all_assets = st.sidebar.checkbox(
