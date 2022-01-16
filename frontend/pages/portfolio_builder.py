@@ -4,13 +4,16 @@ Created on Jan 11, 2022
 
 This module provides the streamlit UI to build your customized portfolio.
 """
-from datetime import date, datetime
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 import streamlit as st
-from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 
-from quantfin.market import assets, data_download
+from quantfin.market.assets import AssetClasses, Indexes
+from quantfin.portfolio_selection.strategies import PortfolioStrategies
+from quantfin.portfolio_selection.portfolio_optimization.objective_functions import (
+    ObjectiveFunctions,
+)
 
 title = "Portfolio Builder"
 
@@ -29,12 +32,18 @@ def app() -> None:
 
     # INPUTs:
 
-    investment_univ = st.selectbox(
-        label="Enter an investment universe", options=("SP500", "NASDAQ100")
+    asset_classes = st.multiselect(
+        label="Choose the asset classes you are interested in",
+        default=AssetClasses.STOCKS.value,
+        options=AssetClasses.list(),
     )
+    if AssetClasses.STOCKS.value in asset_classes:
+        reference_index = st.selectbox(
+            label="Enter a reference index for stocks", options=Indexes.list()
+        )
     ptf_strategy = st.selectbox(
         label="Enter a portfolio selection strategy",
-        options=("Portfolio Optimization", "Others"),
+        options=PortfolioStrategies.list(),
     )
 
     # SIDEBAR (PARAMETERS):
@@ -52,24 +61,21 @@ def app() -> None:
 
     if ptf_strategy == "Portfolio Optimization":
         objective_functions = st.multiselect(
-            label="Choose the objective function",
-            default="Variance",
-            options=(
-                "Variance",
-                "Mean Absolute Deviation",
-                "Conditional Valute-at-Risk",
-            ),
+            label="Choose the objective(s) function(s)",
+            default=ObjectiveFunctions.VARIANCE.value,
+            options=ObjectiveFunctions.list(),
         )
-        min_max = st.radio(
-            label="Choose wether to minimize or maximize the objective function",
-            options=("Min", "Max"),
-        )
+        # min_max = st.radio(
+        #     label="Choose wether to minimize or maximize the objective function",
+        #     options=("Min", "Max"),
+        # )
         with st.expander("See explanation"):
-            st.write(
-                """
-                You can provide one or more objective functions
+            if ObjectiveFunctions.VARIANCE.value in objective_functions:
+                st.write(
+                    """
+                The Portfolio Variance measures the squared distance of portfolio returns from the mean.
             """
-            )
+                )
         if len(objective_functions) > 1:
             weights_objectives = {}
             for obj_fun in objective_functions:

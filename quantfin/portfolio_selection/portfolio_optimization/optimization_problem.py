@@ -7,8 +7,11 @@ import numpy as np
 import pandas as pd
 
 from quantfin.market import assets
-from quantfin.portfolio_selection import portfolio
-from quantfin.portfolio_selection.portfolio_optimization import objective_functions
+from quantfin.portfolio_selection.portfolio import OptimalPortfolio
+from quantfin.portfolio_selection.portfolio_optimization.objective_functions import (
+    ObjectiveFunctions,
+    CovarianceMatrix,
+)
 
 
 class OptimizationProblem:
@@ -16,24 +19,24 @@ class OptimizationProblem:
 
     def __init__(
         self,
-        obj_fun: objective_functions.ObjectiveFunctionType,
+        obj_fun: ObjectiveFunctions,
     ) -> None:
         self.obj_fun = obj_fun
 
-    def solve(self) -> portfolio.OptimalPortfolio:
+    def solve(self) -> OptimalPortfolio:
         """Solves the optimization problem."""
-        return portfolio.OptimalPortfolio()
+        return OptimalPortfolio()
 
 
 class QuadraticProgram(OptimizationProblem):
     """Class that represents a Quadratic Program."""
 
-    def __init__(self, obj_fun: objective_functions.ObjectiveFunctionType) -> None:
-        super().__init__(obj_fun)
+    def __init__(self) -> None:
+        super().__init__(obj_fun=ObjectiveFunctions.VARIANCE)
 
-    def solve(self) -> Any:
+    def solve(self) -> OptimalPortfolio:
         """Solves the optimization problem."""
-        if isinstance(self.obj_fun, objective_functions.CovarianceMatrix):
+        if isinstance(self.obj_fun, CovarianceMatrix):
             covariance_df: pd.DataFrame = self.obj_fun()
             cov_matrix = opt.matrix(2 * covariance_df.values)
             n: int = len(covariance_df.columns)
@@ -53,9 +56,21 @@ class QuadraticProgram(OptimizationProblem):
             for ticker in covariance_df.columns:
                 stocks.append(assets.Stock(ticker=ticker))
             opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
-            return portfolio.OptimalPortfolio(
-                name=objective_functions.ObjectiveFunctionType.MIN_VARIANCE,
+            return OptimalPortfolio(
+                name="Min Variance Portfolio",
                 holdings=opt_holdings,
+                objective_function=ObjectiveFunctions.VARIANCE.value,
             )
         else:
             raise NotImplementedError
+
+
+class LinearProgram(OptimizationProblem):
+    """Class that represents a linear programming problem."""
+
+    def __init__(self) -> None:
+        super().__init__(obj_fun=ObjectiveFunctions.MAD)
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        return OptimalPortfolio()
