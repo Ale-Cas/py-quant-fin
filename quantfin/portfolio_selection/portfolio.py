@@ -3,6 +3,7 @@ Created on Jan 3, 2022
 @author: AC
 """
 
+from optparse import Option
 from typing import Dict, Optional, Set, Union
 
 import numpy as np
@@ -19,12 +20,14 @@ class Portfolio:
         name: Optional[str] = None,
         long_only: Optional[bool] = None,
         holdings: Optional[Dict[assets.IAsset, float]] = None,
+        assets_returns: Optional[pd.DataFrame] = None,
     ):
         self.name = name
         self.long_only: bool = long_only or True
         self.holdings: Dict[assets.IAsset, float] = holdings or {
             assets.Cash(): assets.Cash.value
         }
+        self.assets_returns = assets_returns
         if assets.Cash() not in self.holdings:
             # if cash is not specified in the holdings automatically compute it
             cash = assets.Cash(value=np.abs(1.0 - float(sum(self.holdings.values()))))
@@ -56,6 +59,55 @@ class Portfolio:
                 cash = {assets.Cash.currency: 0.0}
         return cash
 
+    def get_returns(self) -> pd.DataFrame:
+        """Not yet implemented."""
+        if self.assets_returns:
+            print("Asset's returns were already provided.")
+            return self.assets_returns
+        # else:
+        # call the asset's get_returns method
+        return pd.DataFrame()
+
+    @property
+    def variance(self):
+        pass
+
+    # @property
+    # def expected_return(self) -> float:
+    #     pass
+
+    # @property
+    # def sharpe_ratio(self) -> float:
+    #     pass
+
+    # @property
+    # def mad(self) -> float:
+    #     pass
+
+    # @property
+    # def maximum_drawdown(self) -> float:
+    #     pass
+
+    # @property
+    # def serenity_ratio(self) -> float:
+    #     pass
+
+    # @property
+    # def cdar(self) -> float:
+    #     pass
+
+    # @property
+    # def cvar(self) -> float:
+    #     pass
+
+    # @property
+    # def value_at_risk(self) -> float:
+    #     pass
+
+    # @property
+    # def return_on_investment(self, num_holding_days: int) -> float:
+    #     pass
+
 
 class OptimalPortfolio(Portfolio):
     """Class that represents an optimal portfolio.
@@ -77,9 +129,10 @@ class OptimalPortfolio(Portfolio):
         name: Optional[str] = None,
         long_only: Optional[bool] = None,
         holdings: Optional[Dict[assets.IAsset, float]] = None,
+        assets_returns: Optional[pd.DataFrame] = None,
         objective_function: Optional[str] = None,
         start_holding_date: Optional[pd.Timestamp] = None,
     ):
-        super().__init__(name, long_only, holdings)
+        super().__init__(name, long_only, holdings, assets_returns)
         self.objective_function = objective_function
         self.start_holding_date = start_holding_date
