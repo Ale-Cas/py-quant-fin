@@ -6,6 +6,7 @@ Created on Jan 3, 2022
 from typing import Dict, Optional, Set, Union
 
 import numpy as np
+import pandas as pd
 
 from quantfin.market import assets
 
@@ -57,4 +58,28 @@ class Portfolio:
 
 
 class OptimalPortfolio(Portfolio):
-    pass
+    """Class that represents an optimal portfolio.
+
+    Attributes
+    ----------
+    name : str
+    long_only : bool, optional
+        default is True
+    holdings : dict, optional
+
+    objective_function : str, optional
+
+    start_holding_date pd.Timestamp, optional
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        long_only: Optional[bool] = None,
+        holdings: Optional[Dict[assets.IAsset, float]] = None,
+        objective_function: Optional[str] = None,
+        start_holding_date: Optional[pd.Timestamp] = None,
+    ):
+        super().__init__(name, long_only, holdings)
+        self.objective_function = objective_function
+        self.start_holding_date = start_holding_date

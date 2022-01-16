@@ -7,8 +7,22 @@ from typing import TYPE_CHECKING, Optional
 
 import pandas as pd
 
+from quantfin.utils import ListEnum
+
 if TYPE_CHECKING:
     from quantfin.market.data_download import DataProviders
+
+
+class AssetClasses(str, ListEnum):
+    STOCKS = "Stocks"
+    BONDS = "Bonds"
+    ETFs = "Exchange Traded Funds"
+    CURRENCIES = "Currencies"
+
+
+class Indexes(str, ListEnum):
+    SP500 = "S&P 500"
+    NASDAQ100 = "NASDAQ 100"
 
 
 class IAsset(ABC):

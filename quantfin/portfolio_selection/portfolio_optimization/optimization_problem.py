@@ -1,61 +1,167 @@
 """Module to implement optimization problems."""
-
-from typing import Any, Dict
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
 
 import cvxopt as opt
 import numpy as np
 import pandas as pd
 
+from quantfin.utils import ListEnum
 from quantfin.market import assets
-from quantfin.portfolio_selection import portfolio
-from quantfin.portfolio_selection.portfolio_optimization import objective_functions
+from quantfin.portfolio_selection.portfolio import OptimalPortfolio
 
 
-class OptimizationProblem:
-    """Class that represents a generic optimization problem."""
+class ObjectiveType(str, ListEnum):
+    """List of objective functions."""
+
+    VARIANCE = "Covariance Matrix"
+    MAD = "Linearized Mean-Absolute-Deviation"
+    CVAR = "Linearized Conditional-Value-at-Risk"
+
+
+class ConstraintType(ListEnum):
+    """List of constraints."""
+
+    BUDGET = "BUDGET"
+    NO_SHORTSELLING = "NO_SHORTSELLING"
+    MAX_INSTRUMENT_WEIGHT = "MAX_INSTRUMENT_WEIGHT"
+
+
+class OptimizationModel(ABC):
+    """Class that represents an abstract optimization problem."""
 
     def __init__(
         self,
-        obj_fun: objective_functions.ObjectiveFunctionType,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType],
     ) -> None:
-        self.obj_fun = obj_fun
+        self.returns = returns
+        self.objective_type = objective_type
+        self.constraints = constraints
 
-    def solve(self) -> portfolio.OptimalPortfolio:
-        """Solves the optimization problem."""
-        return portfolio.OptimalPortfolio()
+    @property
+    @abstractmethod
+    def objective_function(self) -> Any:
+        raise NotImplementedError("Abstract method")
 
-
-class QuadraticProgram(OptimizationProblem):
-    """Class that represents a Quadratic Program."""
-
-    def __init__(self, obj_fun: objective_functions.ObjectiveFunctionType) -> None:
-        super().__init__(obj_fun)
-
+    @abstractmethod
     def solve(self) -> Any:
         """Solves the optimization problem."""
-        if isinstance(self.obj_fun, objective_functions.CovarianceMatrix):
-            covariance_df: pd.DataFrame = self.obj_fun()
-            cov_matrix = opt.matrix(2 * covariance_df.values)
-            n: int = len(covariance_df.columns)
-            # TODO: This should be in the constraint class or in another method:
-            q = opt.matrix(0.0, (n, 1))
-            # Inequality constraint G * x <= h
-            G = -opt.matrix(np.eye(n))  # negative n x n identity matrix
-            h = opt.matrix(0.0, (n, 1))
-            # Equality constraint A * x = b
-            A = opt.matrix(1.0, (1, n))
-            b = opt.matrix(1.0)
+        raise NotImplementedError("Abstract method")
 
-            solution = opt.solvers.qp(P=cov_matrix, q=q, G=G, h=h, A=A, b=b)
-            weights = np.array(solution["x"]).reshape(n)
-            weights[weights < 1e-4] = 0.0
-            stocks = []
-            for ticker in covariance_df.columns:
-                stocks.append(assets.Stock(ticker=ticker))
-            opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
-            return portfolio.OptimalPortfolio(
-                name=objective_functions.ObjectiveFunctionType.MIN_VARIANCE,
-                holdings=opt_holdings,
+
+class MeanVariance(OptimizationModel):
+    """Class that represents the Mean-Variance model."""
+
+    def __init__(
+        self,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType],
+    ) -> None:
+        super().__init__(returns, objective_type, constraints)
+
+    @property
+    def objective_function(self) -> np.array:
+        return 2 * self.returns.cov().values
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        cov_matrix = opt.matrix(self.objective_function)
+        n: int = len(self.returns.columns)
+        # TODO: This should be in the constraint class or in another method:
+        q = opt.matrix(0.0, (n, 1))
+        # Inequality constraint G * x <= h
+        G = -opt.matrix(np.eye(n))  # negative n x n identity matrix
+        h = opt.matrix(0.0, (n, 1))
+        # Equality constraint A * x = b
+        A = opt.matrix(1.0, (1, n))
+        b = opt.matrix(1.0)
+
+        solution = opt.solvers.qp(P=cov_matrix, q=q, G=G, h=h, A=A, b=b)
+        weights = np.array(solution["x"]).reshape(n)
+        weights[weights < 1e-4] = 0.0
+        stocks = []
+        for ticker in self.returns.columns:
+            stocks.append(assets.Stock(ticker=ticker))
+        opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
+        return OptimalPortfolio(
+            name="Min Variance Portfolio",
+            holdings=opt_holdings,
+            objective_function=ObjectiveType.VARIANCE.value,
+        )
+
+
+class MeanMAD(OptimizationModel):
+    """Class that represents the Mean-MAD model."""
+
+    def __init__(
+        self,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType],
+    ) -> None:
+        super().__init__(returns, objective_type, constraints)
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+
+        return OptimalPortfolio()
+
+
+class MeanCVaR(OptimizationModel):
+    """Class that represents the Mean-CVaR model."""
+
+    def __init__(
+        self,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType],
+    ) -> None:
+        super().__init__(returns, objective_type, constraints)
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        return OptimalPortfolio()
+
+
+class OptimizationProblem:
+    """Class that represents an abstract optimization problem."""
+
+    def __init__(
+        self,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType],
+    ) -> None:
+        self.returns = returns
+        self.objective_type = objective_type
+        self.constraints = constraints
+
+        if self.objective_type == ObjectiveType.VARIANCE:
+            self.problem = MeanVariance(
+                returns=self.returns,
+                objective_type=self.objective_type,
+                constraints=self.constraints,
             )
-        else:
-            raise NotImplementedError
+        if self.objective_type == ObjectiveType.MAD:
+            self.problem = MeanMAD(
+                returns=self.returns,
+                objective_type=self.objective_type,
+                constraints=self.constraints,
+            )
+        if self.objective_type == ObjectiveType.CVAR:
+            self.problem = MeanCVaR(
+                returns=self.returns,
+                objective_type=self.objective_type,
+                constraints=self.constraints,
+            )
+
+    @property
+    def objective_function(self) -> np.array:
+        return self.problem.objective_function
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        return self.problem.solve()

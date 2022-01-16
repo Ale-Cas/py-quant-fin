@@ -9,7 +9,7 @@ from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 
 from quantfin.market import assets, data_download
 
-title = "Data Analyzer"
+title = "Data Visualization"
 
 
 def app() -> None:
@@ -17,9 +17,9 @@ def app() -> None:
     # TEXT:
     st.write(
         """
-             # Stock Data Analyzer
+             # Data Analysis Dashboard
              
-             Please provide an asset ticker and choose a data provider to see stock data.
+             Please provide an asset ticker to display historical data.
              """
     )
 
