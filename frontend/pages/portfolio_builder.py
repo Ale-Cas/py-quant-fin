@@ -61,7 +61,7 @@ def app() -> None:
 
     if ptf_strategy == "Portfolio Optimization":
         objective_functions = st.multiselect(
-            label="Choose the objective(s) function(s)",
+            label="Choose the optimization model",
             default=ObjectiveFunctions.VARIANCE.value,
             options=ObjectiveFunctions.list(),
         )

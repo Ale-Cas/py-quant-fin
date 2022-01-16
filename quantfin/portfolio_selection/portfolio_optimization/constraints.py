@@ -39,7 +39,7 @@ class Budget(IConstraint):
 
         minimize f(x)
         s.t.
-            A*x <= b
+            A*x = b
 
         Returns
         -------

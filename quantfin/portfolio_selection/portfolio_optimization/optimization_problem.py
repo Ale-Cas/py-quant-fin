@@ -11,6 +11,8 @@ from quantfin.portfolio_selection.portfolio import OptimalPortfolio
 from quantfin.portfolio_selection.portfolio_optimization.objective_functions import (
     ObjectiveFunctions,
     CovarianceMatrix,
+    LinearMAD,
+    LinearCVaR,
 )
 
 
@@ -67,6 +69,31 @@ class QuadraticProgram(OptimizationProblem):
 
 class LinearProgram(OptimizationProblem):
     """Class that represents a linear programming problem."""
+
+    def __init__(self, obj_fun) -> None:
+        super().__init__(obj_fun)
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        return OptimalPortfolio()
+
+
+class MeanMAD(LinearProgram):
+    """Class that represents the Mean-MAD model."""
+
+    def __init__(self) -> None:
+        super().__init__(obj_fun=ObjectiveFunctions.MAD)
+
+    def solve(self) -> OptimalPortfolio:
+        """Solves the optimization problem."""
+        mad = LinearMAD()
+        f = mad()
+
+        return OptimalPortfolio()
+
+
+class MeanCVaR(LinearProgram):
+    """Class that represents the Mean-CVaR model."""
 
     def __init__(self) -> None:
         super().__init__(obj_fun=ObjectiveFunctions.MAD)
