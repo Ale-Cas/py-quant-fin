@@ -61,10 +61,11 @@ class OptimizationModel:
 
     @property
     def objective_function(self) -> Dict[str, Union[np.array, float]]:
-        objective_dict = {
-            "Quadratic": np.eye(self.num_assets) * self.regularization_weight,
-            "Linear": np.zeros(shape=(self.num_assets, 1)),
-        }
+        objective_dict = {}
+        objective_dict["Linear"] = np.zeros(self.num_assets)
+        objective_dict["Quadratic"] = (
+            np.eye(len(objective_dict["Linear"])) * self.regularization_weight
+        )
         return objective_dict
 
     def get_constraints(self) -> Dict[str, Union[np.array, float]]:
@@ -167,19 +168,6 @@ class MeanVariance(OptimizationModel):
             returns, objective_type, constraints, regularization_weight, cash_pct
         )
 
-    def get_constraints(self) -> Dict[str, Union[np.array, float]]:
-        """Computes the constraints and returns them in a dictionary."""
-        constraints_dict = super().get_constraints()
-        # The Mean-Variance model has a different definition of the A_budget matrix
-        constraints_dict["A_budget"] = np.ones(shape=(1, self.num_assets))
-
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            # Inequality constraint G * x <= h
-            constraints_dict["G_inequality"] = -np.eye(self.num_assets)
-
-        # TODO: #10 Add other constraints
-        return constraints_dict
-
     @property
     def objective_function(self) -> Dict[str, Union[np.array, float]]:
         """Returns a dictionary with the objective function.
@@ -196,6 +184,19 @@ class MeanVariance(OptimizationModel):
             "Linear": np.zeros(shape=(self.num_assets, 1)),
         }
 
+    def get_constraints(self) -> Dict[str, Union[np.array, float]]:
+        """Computes the constraints and returns them in a dictionary."""
+        constraints_dict = super().get_constraints()
+        # The Mean-Variance model has a different definition of the A_budget matrix
+        constraints_dict["A_budget"] = np.ones(shape=(1, self.num_assets))
+
+        if ConstraintType.NO_SHORTSELLING in self.constraints:
+            # Inequality constraint G * x <= h
+            constraints_dict["G_inequality"] = -np.eye(self.num_assets)
+
+        # TODO: #10 Add other constraints
+        return constraints_dict
+
 
 class MeanMAD(OptimizationModel):
     """Class that represents the Mean-Variance model."""
@@ -211,6 +212,25 @@ class MeanMAD(OptimizationModel):
         super().__init__(
             returns, objective_type, constraints, regularization_weight, cash_pct
         )
+
+    @property
+    def objective_function(self) -> Dict[str, Union[np.array, float]]:
+        """Returns a dictionary with the objective function.
+
+        Keys
+        ----
+        q
+            Linear objective function
+        """
+        objective_dict = super().objective_function
+        linear_mad = np.hstack(
+            (np.zeros(self.num_assets), np.ones(self.num_obs) / self.num_obs)
+        )
+        objective_dict["Linear"] = linear_mad
+        objective_dict["Quadratic"] = (
+            np.eye(len(objective_dict["Linear"])) * self.regularization_weight
+        )
+        return objective_dict
 
     def get_constraints(self) -> Dict[str, Union[np.array, float]]:
         """Get the constraints and computes them."""
@@ -266,25 +286,6 @@ class MeanMAD(OptimizationModel):
 
         # TODO: #10 Add other constraints
         return constraints_dict
-
-    @property
-    def objective_function(self) -> Dict[str, Union[np.array, float]]:
-        """Returns a dictionary with the objective function.
-
-        Keys
-        ----
-        q
-            Linear objective function
-        """
-        objective_dict = super().objective_function
-        linear_mad = np.hstack(
-            (np.zeros(self.num_assets), np.ones(self.num_obs) / self.num_obs)
-        )
-        objective_dict["Linear"] = linear_mad
-        objective_dict["Quadratic"] = (
-            np.eye(len(objective_dict["Linear"])) * self.regularization_weight
-        )
-        return objective_dict
 
 
 class MeanCVaR(OptimizationModel):
@@ -357,13 +358,13 @@ class OptimizationProblem(OptimizationModel):
                 confidence_level=self.confidence_level,
             )
 
-    def get_constraints(self) -> Dict[str, np.array]:
-        """Get the constraints and computes them."""
-        return self.model.get_constraints()
-
     @property
     def objective_function(self) -> np.array:
         return self.model.objective_function
+
+    def get_constraints(self) -> Dict[str, np.array]:
+        """Get the constraints and computes them."""
+        return self.model.get_constraints()
 
     def solve(self) -> OptimalPortfolio:
         """Solves the following optimization problem.
