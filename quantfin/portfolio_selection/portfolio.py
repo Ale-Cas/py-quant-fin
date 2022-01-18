@@ -30,15 +30,26 @@ class Portfolio:
         self.assets_returns = assets_returns
         if assets.Cash() not in self.holdings:
             # if cash is not specified in the holdings automatically compute it
-            cash = assets.Cash(value=np.abs(1.0 - float(sum(self.holdings.values()))))
+            cash = assets.Cash(value=1.0 - np.abs(float(sum(self.holdings.values()))))
+            if cash.value < 1e-4:
+                cash.value = 0.0
             self.holdings[cash] = cash.value
         assert (
-            float(sum(self.holdings.values())) == 1.0
+            1.0 - float(sum(self.holdings.values())) < 1e-4
         ), f"Holding weights should sum to one, not {float(sum(self.holdings.values()))}."
 
     @property
+    def nonzero_holdings(self) -> Dict[assets.IAsset, float]:
+        """Dictionary of portfolio holdings."""
+        return {
+            asset: weight
+            for asset, weight in self.holdings.items()
+            if self.holdings[asset] != 0.0
+        }
+
+    @property
     def instruments(self) -> Set[Union[assets.Cash, assets.IAsset]]:
-        """List of portfolio instruments."""
+        """Set of portfolio instruments."""
         return {
             asset
             for asset in self.holdings.keys()
@@ -52,6 +63,7 @@ class Portfolio:
 
     @property
     def cash(self) -> Dict[str, float]:
+        """Cash in portfolio."""
         for asset in self.holdings.keys():
             if isinstance(asset, assets.Cash):
                 cash = {asset.currency: asset.value}
