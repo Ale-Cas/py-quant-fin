@@ -1,14 +1,14 @@
 """Module to implement optimization problems."""
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from turtle import shape
+from typing import Dict, List, Optional, Union
 
 import cvxopt as opt
 import numpy as np
 import pandas as pd
 
-from quantfin.utils import ListEnum
 from quantfin.market import assets
 from quantfin.portfolio_selection.portfolio import OptimalPortfolio
+from quantfin.utils import ListEnum
 
 
 class ObjectiveType(str, ListEnum):
@@ -22,11 +22,10 @@ class ObjectiveType(str, ListEnum):
 class ConstraintType(ListEnum):
     """List of constraints."""
 
-    NO_SHORTSELLING = "NO_SHORTSELLING"
-    MAX_INSTRUMENT_WEIGHT = "MAX_INSTRUMENT_WEIGHT"
+    NO_SHORTSELLING = "No short-selling"
 
 
-class OptimizationModel(ABC):
+class OptimizationModel:
     """Class that represents an abstract optimization problem."""
 
     def __init__(
@@ -34,10 +33,14 @@ class OptimizationModel(ABC):
         returns: pd.DataFrame,
         objective_type: ObjectiveType,
         constraints: List[ConstraintType] = [],
+        regularization_weight: float = 0.05,
+        cash_pct: float = 0.0,
     ) -> None:
         self.returns = returns
         self.objective_type = objective_type
         self.constraints = constraints
+        self.regularization_weight = regularization_weight
+        self.cash_pct = cash_pct
 
     def add_constraint(self, constraint: ConstraintType) -> None:
         if isinstance(constraint, ConstraintType):
@@ -48,66 +51,54 @@ class OptimizationModel(ABC):
                     supported constraints are: {",".join(ConstraintType.list())}"""
             )
 
-    @abstractmethod
-    def get_constraints(self) -> Any:
-        raise NotImplementedError("Abstract method")
+    @property
+    def num_assets(self) -> int:
+        return len(self.returns.columns)
 
     @property
-    @abstractmethod
-    def objective_function(self) -> Any:
-        raise NotImplementedError("Abstract method")
-
-    @abstractmethod
-    def solve(self) -> Any:
-        """Solves the optimization problem."""
-        raise NotImplementedError("Abstract method")
-
-
-class MeanVariance(OptimizationModel):
-    """Class that represents the Mean-Variance model."""
-
-    def __init__(
-        self,
-        returns: pd.DataFrame,
-        objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
-    ) -> None:
-        super().__init__(returns, objective_type, constraints)
-
-    def get_constraints(self) -> Dict[str, Union[np.array, float]]:
-        """Get the constraints and computes them."""
-        n: int = len(self.returns.columns)
-        constraints_dict = {}
-
-        # BUDGET:
-        # Equality constraint A * x = b
-        constraints_dict["A"] = np.ones(shape=(1, n))
-        constraints_dict["b"] = 1.0
-
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            # Inequality constraint G * x <= h
-            constraints_dict["G"] = -np.eye(n)  # negative n x n identity matrix
-            constraints_dict["h"] = np.zeros(shape=(n, 1))
-
-        # TODO: #10 Add other constraints
-        return constraints_dict
+    def num_obs(self) -> int:
+        return len(self.returns.index)
 
     @property
     def objective_function(self) -> Dict[str, Union[np.array, float]]:
-        """Returns a dictionary with the objective function.
+        objective_dict = {
+            "Quadratic": np.eye(self.num_assets) * self.regularization_weight,
+            "Linear": np.zeros(shape=(self.num_assets, 1)),
+        }
+        return objective_dict
 
-        Keys
-        ----
-        P
-            Quadratic part of the objective function
-        q'
-            Linear part (already transposed)
-        """
-        n: int = len(self.returns.columns)
-        return {"P": 2 * self.returns.cov().values, "q'": np.zeros(shape=(n, 1))}
+    def get_constraints(self) -> Dict[str, Union[np.array, float]]:
+        """Computes the constraints and returns them in a dictionary."""
+        constraints_dict = {}
+        A_budget = np.hstack(
+            (
+                np.ones(self.num_assets),
+                np.zeros(len(self.objective_function["Linear"]) - self.num_assets),
+            )
+        )
+        constraints_dict["A_budget"] = np.reshape(A_budget, (1, len(A_budget)))
+        constraints_dict["b_budget"] = 1.0 - self.cash_pct
+        if ConstraintType.NO_SHORTSELLING in self.constraints:
+
+            G_no_short = np.concatenate(
+                (
+                    -np.eye(self.num_assets),
+                    np.zeros(
+                        (
+                            self.num_assets,
+                            len(self.objective_function["Linear"]) - self.num_assets,
+                        )
+                    ),
+                ),
+                axis=1,
+            )
+            h_no_short = np.zeros(self.num_assets)
+            constraints_dict["G_inequality"] = G_no_short
+            constraints_dict["h_inequality"] = h_no_short
+        return constraints_dict
 
     def solve(self) -> OptimalPortfolio:
-        """Solve the following optimization problem.
+        """Solves the following optimization problem.
 
         minimize:
                     (1/2)*x'*P*x + q'*x
@@ -123,27 +114,87 @@ class MeanVariance(OptimizationModel):
             name: opt.matrix(constraint)
             for name, constraint in self.get_constraints().items()
         }
-
         solution = opt.solvers.qp(
-            P=objectives_matrices["P"],
-            q=objectives_matrices["q'"],
-            G=constraints_matrices["G"],
-            h=constraints_matrices["h"],
-            A=constraints_matrices["A"],
-            b=constraints_matrices["b"],
+            P=objectives_matrices["Quadratic"],
+            q=objectives_matrices["Linear"],
+            G=constraints_matrices["G_inequality"],
+            h=constraints_matrices["h_inequality"],
+            A=constraints_matrices["A_budget"],
+            b=constraints_matrices["b_budget"],
         )
-        n: int = len(self.returns.columns)
-        weights = np.array(solution["x"]).reshape(n)
-        weights[weights < 1e-4] = 0.0
+        if (
+            ConstraintType.NO_SHORTSELLING not in self.constraints
+            and self.objective_type == ObjectiveType.VARIANCE
+        ):
+            solution = opt.solvers.qp(
+                P=objectives_matrices["Quadratic"],
+                q=objectives_matrices["Linear"],
+                A=constraints_matrices["A_budget"],
+                b=constraints_matrices["b_budget"],
+            )
+        assert (
+            solution["status"] == "optimal"
+        ), "The status of the solution is not optimal!"
+        weights = np.array(solution["x"]).reshape(np.array(solution["x"]).size)[
+            0 : self.num_assets
+        ]
         stocks = []
         for ticker in self.returns.columns:
             stocks.append(assets.Stock(ticker=ticker))
         opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
+        for asset, weight in opt_holdings.items():
+            if weight > 0 and weight < 1e-4:
+                opt_holdings[asset] = 0.0
         return OptimalPortfolio(
-            name="Min Variance Portfolio",
+            name=f"Min {self.objective_type.value} Portfolio",
             holdings=opt_holdings,
             objective_function=ObjectiveType.VARIANCE.value,
         )
+
+
+class MeanVariance(OptimizationModel):
+    """Class that represents the Mean-Variance model."""
+
+    def __init__(
+        self,
+        returns: pd.DataFrame,
+        objective_type: ObjectiveType,
+        constraints: List[ConstraintType] = [],
+        regularization_weight: float = 0.05,
+        cash_pct: float = 0,
+    ) -> None:
+        super().__init__(
+            returns, objective_type, constraints, regularization_weight, cash_pct
+        )
+
+    def get_constraints(self) -> Dict[str, Union[np.array, float]]:
+        """Computes the constraints and returns them in a dictionary."""
+        constraints_dict = super().get_constraints()
+        # The Mean-Variance model has a different definition of the A_budget matrix
+        constraints_dict["A_budget"] = np.ones(shape=(1, self.num_assets))
+
+        if ConstraintType.NO_SHORTSELLING in self.constraints:
+            # Inequality constraint G * x <= h
+            constraints_dict["G_inequality"] = -np.eye(self.num_assets)
+
+        # TODO: #10 Add other constraints
+        return constraints_dict
+
+    @property
+    def objective_function(self) -> Dict[str, Union[np.array, float]]:
+        """Returns a dictionary with the objective function.
+
+        Keys
+        ----
+        Quadratic
+            Quadratic part of the objective function
+        Linear
+            Linear part (already transposed)
+        """
+        return {
+            "Quadratic": 2 * self.returns.cov().values,
+            "Linear": np.zeros(shape=(self.num_assets, 1)),
+        }
 
 
 class MeanMAD(OptimizationModel):
@@ -154,23 +205,64 @@ class MeanMAD(OptimizationModel):
         returns: pd.DataFrame,
         objective_type: ObjectiveType,
         constraints: List[ConstraintType] = [],
+        regularization_weight: float = 0.05,
+        cash_pct: float = 0,
     ) -> None:
-        super().__init__(returns, objective_type, constraints)
+        super().__init__(
+            returns, objective_type, constraints, regularization_weight, cash_pct
+        )
 
     def get_constraints(self) -> Dict[str, Union[np.array, float]]:
         """Get the constraints and computes them."""
-        (T, n) = np.shape(self.returns)
-        constraints_dict = {}
+        constraints_dict = super().get_constraints()
         # FIXME: #11 Implement MAD constraints
-        # BUDGET:
-        # Equality constraint A * x = b
-        constraints_dict["A"] = np.ones(shape=(1, n))
-        constraints_dict["b"] = 1.0
-
+        mean_mat = np.tile(self.returns.mean(), (self.num_obs, 1))
+        mad_ge = np.concatenate(
+            (
+                self.returns - mean_mat,
+                -np.eye(self.num_obs),
+            ),
+            axis=1,
+        )
+        mad_le = np.concatenate(
+            (
+                -(self.returns - mean_mat),
+                -np.eye(self.num_obs),
+            ),
+            axis=1,
+        )
+        positive_abs_dev = np.concatenate(
+            (
+                np.zeros(shape=(self.num_obs, self.num_assets)),
+                -np.eye(self.num_obs),
+            ),
+            axis=1,
+        )
+        h_mad = np.zeros(3 * self.num_obs)
         if ConstraintType.NO_SHORTSELLING in self.constraints:
-            # Inequality constraint G * x <= h
-            constraints_dict["G"] = -np.eye(n)  # negative n x n identity matrix
-            constraints_dict["h"] = np.zeros(shape=(n, 1))
+            constraints_dict["G_inequality"] = np.concatenate(
+                (
+                    mad_ge,
+                    mad_le,
+                    positive_abs_dev,
+                    super().get_constraints()["G_inequality"],
+                )
+            )
+            constraints_dict["h_inequality"] = np.hstack(
+                (
+                    h_mad,
+                    super().get_constraints()["h_inequality"],
+                )
+            )
+        else:
+            constraints_dict["G_inequality"] = np.concatenate(
+                (
+                    mad_ge,
+                    mad_le,
+                    positive_abs_dev,
+                )
+            )
+            constraints_dict["h_inequality"] = h_mad
 
         # TODO: #10 Add other constraints
         return constraints_dict
@@ -184,48 +276,15 @@ class MeanMAD(OptimizationModel):
         q
             Linear objective function
         """
-        (T, n) = np.shape(self.returns)
-        linear_mad = np.hstack((np.zeros(n), np.ones(T) / T))
-        return {"q": linear_mad}
-
-    def solve(self) -> OptimalPortfolio:
-        """Solve the following optimization problem.
-
-        minimize:
-                    (1/2)*x'*P*x + q'*x
-        subject to:
-                    G*x <= h
-                    A*x = b.
-        """
-        objectives_matrices = {
-            name: opt.matrix(objective)
-            for name, objective in self.objective_function.items()
-        }
-        constraints_matrices = {
-            name: opt.matrix(constraint)
-            for name, constraint in self.get_constraints().items()
-        }
-
-        solution = opt.solvers.qp(
-            P=objectives_matrices["P"],
-            q=objectives_matrices["q"],
-            G=constraints_matrices["G"],
-            h=constraints_matrices["h"],
-            A=constraints_matrices["A"],
-            b=constraints_matrices["b"],
+        objective_dict = super().objective_function
+        linear_mad = np.hstack(
+            (np.zeros(self.num_assets), np.ones(self.num_obs) / self.num_obs)
         )
-        n: int = len(self.returns.columns)
-        weights = np.array(solution["x"]).reshape(n)
-        weights[weights < 1e-4] = 0.0
-        stocks = []
-        for ticker in self.returns.columns:
-            stocks.append(assets.Stock(ticker=ticker))
-        opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
-        return OptimalPortfolio(
-            name="Min Variance Portfolio",
-            holdings=opt_holdings,
-            objective_function=ObjectiveType.VARIANCE.value,
+        objective_dict["Linear"] = linear_mad
+        objective_dict["Quadratic"] = (
+            np.eye(len(objective_dict["Linear"])) * self.regularization_weight
         )
+        return objective_dict
 
 
 class MeanCVaR(OptimizationModel):
@@ -238,81 +297,21 @@ class MeanCVaR(OptimizationModel):
         returns: pd.DataFrame,
         objective_type: ObjectiveType,
         constraints: List[ConstraintType] = [],
+        regularization_weight: float = 0.05,
+        cash_pct: float = 0,
         confidence_level: float = 0.05,
     ) -> None:
-        super().__init__(returns, objective_type, constraints)
+        super().__init__(
+            returns, objective_type, constraints, regularization_weight, cash_pct
+        )
         self.confidence_level = confidence_level
 
     def get_constraints(self) -> Dict[str, Union[np.array, float]]:
         """Get the constraints and computes them."""
-        n: int = len(self.returns.columns)
-        constraints_dict = {}
-
-        # BUDGET:
-        # Equality constraint A * x = b
-        constraints_dict["A"] = np.ones(shape=(1, n))
-        constraints_dict["b"] = 1.0
-
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            # Inequality constraint G * x <= h
-            constraints_dict["G"] = -np.eye(n)  # negative n x n identity matrix
-            constraints_dict["h"] = np.zeros(shape=(n, 1))
+        constraints_dict = OptimizationModel.get_constraints()
 
         # TODO: #10 Add other constraints
         return constraints_dict
-
-    @property
-    def objective_function(self) -> Dict[str, Union[np.array, float]]:
-        """Returns a dictionary with the objective function.
-
-        Keys
-        ----
-        P
-            Quadratic part of the objective function
-        q'
-            Linear part (already transposed)
-        """
-        n: int = len(self.returns.columns)
-        return {"P": 2 * self.returns.cov().values, "q'": np.zeros(shape=(n, 1))}
-
-    def solve(self) -> OptimalPortfolio:
-        """Solve the following optimization problem.
-
-        minimize:
-                    (1/2)*x'*P*x + q'*x
-        subject to:
-                    G*x <= h
-                    A*x = b.
-        """
-        objectives_matrices = {
-            name: opt.matrix(objective)
-            for name, objective in self.objective_function.items()
-        }
-        constraints_matrices = {
-            name: opt.matrix(constraint)
-            for name, constraint in self.get_constraints().items()
-        }
-
-        solution = opt.solvers.qp(
-            P=objectives_matrices["P"],
-            q=objectives_matrices["q"],
-            G=constraints_matrices["G"],
-            h=constraints_matrices["h"],
-            A=constraints_matrices["A"],
-            b=constraints_matrices["b"],
-        )
-        n: int = len(self.returns.columns)
-        weights = np.array(solution["x"]).reshape(n)
-        weights[weights < 1e-4] = 0.0
-        stocks = []
-        for ticker in self.returns.columns:
-            stocks.append(assets.Stock(ticker=ticker))
-        opt_holdings: Dict[assets.IAsset, float] = dict(zip(stocks, weights))
-        return OptimalPortfolio(
-            name="Min Variance Portfolio",
-            holdings=opt_holdings,
-            objective_function=ObjectiveType.VARIANCE.value,
-        )
 
 
 class OptimizationProblem(OptimizationModel):
@@ -323,21 +322,29 @@ class OptimizationProblem(OptimizationModel):
         returns: pd.DataFrame,
         objective_type: ObjectiveType,
         constraints: List[ConstraintType] = [],
-        confidence_level: Optional[float] = None,
+        regularization_weight: float = 0.05,
+        cash_pct: float = 0.0,
+        confidence_level: float = 0.05,
     ) -> None:
-        super().__init__(returns, objective_type, constraints)
+        super().__init__(
+            returns, objective_type, constraints, regularization_weight, cash_pct
+        )
 
         if self.objective_type == ObjectiveType.VARIANCE:
             self.model = MeanVariance(
                 returns=self.returns,
                 objective_type=self.objective_type,
                 constraints=self.constraints,
+                regularization_weight=self.regularization_weight,
+                cash_pct=self.cash_pct,
             )
         if self.objective_type == ObjectiveType.MAD:
             self.model = MeanMAD(
                 returns=self.returns,
                 objective_type=self.objective_type,
                 constraints=self.constraints,
+                regularization_weight=self.regularization_weight,
+                cash_pct=self.cash_pct,
             )
         if self.objective_type == ObjectiveType.CVAR:
             self.confidence_level = confidence_level or 0.05
@@ -345,6 +352,8 @@ class OptimizationProblem(OptimizationModel):
                 returns=self.returns,
                 objective_type=self.objective_type,
                 constraints=self.constraints,
+                regularization_weight=self.regularization_weight,
+                cash_pct=self.cash_pct,
                 confidence_level=self.confidence_level,
             )
 
@@ -357,5 +366,12 @@ class OptimizationProblem(OptimizationModel):
         return self.model.objective_function
 
     def solve(self) -> OptimalPortfolio:
-        """Solves the optimization problem."""
+        """Solves the following optimization problem.
+
+        minimize:
+                    (1/2)*x'*P*x + q'*x
+        subject to:
+                    G*x <= h
+                    A*x = b.
+        """
         return self.model.solve()
