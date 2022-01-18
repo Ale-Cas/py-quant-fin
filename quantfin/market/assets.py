@@ -14,13 +14,17 @@ if TYPE_CHECKING:
 
 
 class AssetClasses(str, ListEnum):
+    """List of supported asset classes."""
+
     STOCKS = "Stocks"
     BONDS = "Bonds"
-    ETFs = "Exchange Traded Funds"
+    ETF = "Exchange Traded Funds"
     CURRENCIES = "Currencies"
 
 
 class Indexes(str, ListEnum):
+    """List of supported indexes."""
+
     SP500 = "S&P 500"
     NASDAQ100 = "NASDAQ 100"
 

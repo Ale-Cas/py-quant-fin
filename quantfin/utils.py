@@ -10,7 +10,8 @@ class ListEnum(Enum):
 
     @classmethod
     def list(cls) -> List[Any]:
-        return list(map(lambda c: c.value, cls))
+        """Returns a list of Enum's values."""
+        return list(map(lambda c: c.value, cls))  # type: ignore
 
 
 def prices_to_returns(prices: pd.DataFrame, log: bool = False):
@@ -29,6 +30,7 @@ def prices_to_returns(prices: pd.DataFrame, log: bool = False):
         A pd.DataFrame with linear or logarithmic returns
     """
     if log:
-        return np.log(1 + prices.pct_change())
+        returns = np.log(1 + prices.pct_change())
     else:
-        return prices.pct_change()
+        returns = prices.pct_change()
+    return returns

@@ -45,3 +45,16 @@ def test_mad() -> None:
     )
     min_mad_portfolio = min_mad.solve()
     assert min_mad_portfolio
+
+
+def test_cvar() -> None:
+    univ = InvestmentUniverse(name="NASDAQ100")
+    rets = univ.get_prices(prices_column="Close").pct_change().dropna()
+    min_cvar = OptimizationProblem(
+        returns=rets,
+        objective_type=ObjectiveType.CVAR,
+        constraints=[ConstraintType.NO_SHORTSELLING],
+        regularization_weight=0.1,
+    )
+    min_cvar_portfolio = min_cvar.solve()
+    assert min_cvar_portfolio
