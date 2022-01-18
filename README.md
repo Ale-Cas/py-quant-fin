@@ -3,6 +3,17 @@ The py-quant-fin library is an open-source quantitative finance framework.
 
 ![Tests](https://github.com/Ale-Cas/py-quant-fin/actions/workflows/python-package.yml/badge.svg)
 
+## TODO:
+- Min CVaR
+- Frontend input-output
+- Refactoring assets module
+- Expected return constraint
+- Max instrument weight constraint
+- CDaR
+- Risk parity:
+    - ERC
+    - HRP
+
 ## Features
 - Data downloading from different data sources, such as: 
     - Yahoo Finance;
