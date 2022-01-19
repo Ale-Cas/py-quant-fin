@@ -10,7 +10,7 @@ from quantfin.portfolio_selection.portfolio_optimization import (
 
 
 def test_min_variance() -> None:
-    univ = InvestmentUniverse(name="NASDAQ100")
+    univ = InvestmentUniverse(name="NASDAQ 100")
     rets = univ.get_prices(prices_column="Close").pct_change().dropna()
     min_variance = OptimizationProblem(
         returns=rets,
@@ -23,7 +23,7 @@ def test_min_variance() -> None:
 
 
 def test_add_constraint() -> None:
-    univ = InvestmentUniverse(name="NASDAQ100")
+    univ = InvestmentUniverse(name="NASDAQ 100")
     rets = univ.get_prices(prices_column="Close").pct_change().dropna()
     min_variance = OptimizationProblem(
         returns=rets,
@@ -35,7 +35,7 @@ def test_add_constraint() -> None:
 
 
 def test_mad() -> None:
-    univ = InvestmentUniverse(name="NASDAQ100")
+    univ = InvestmentUniverse(name="NASDAQ 100")
     rets = univ.get_prices(prices_column="Close").pct_change().dropna()
     min_mad = OptimizationProblem(
         returns=rets,
@@ -48,7 +48,7 @@ def test_mad() -> None:
 
 
 def test_cvar() -> None:
-    univ = InvestmentUniverse(name="NASDAQ100")
+    univ = InvestmentUniverse(name="NASDAQ 100")
     rets = univ.get_prices(prices_column="Close").pct_change().dropna()
     min_cvar = OptimizationProblem(
         returns=rets,
