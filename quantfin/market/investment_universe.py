@@ -10,7 +10,7 @@ from warnings import warn
 import pandas as pd
 import yfinance as yf
 
-from quantfin.market.assets import Stock
+from quantfin.market.assets import Stock, Indexes
 
 
 class InvestmentUniverse:
@@ -18,20 +18,18 @@ class InvestmentUniverse:
     This class represent an investment universe.
     """
 
-    VALID_UNIVERSE_NAMES: set = {"SP500", "NASDAQ100"}
-
     def __init__(
         self,
         name: str,
         assets: Optional[Set[Stock]] = None,
         prices: pd.DataFrame = None,
     ) -> None:
-        if name in InvestmentUniverse.VALID_UNIVERSE_NAMES:
+        if name in Indexes.list():
             self.name = name
         else:
             raise ValueError(
                 f"""Inappropriate universe name, 
-                supported universe names are: {InvestmentUniverse.VALID_UNIVERSE_NAMES}"""
+                supported universe names are: {",".join(Indexes.list())}"""
             )
         self.assets = assets or self.get_assets()
         self.prices = prices or pd.DataFrame()
@@ -59,13 +57,13 @@ class InvestmentUniverse:
                 f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
             )
         self.assets = set()
-        if self.name == "SP500":
+        if self.name == Indexes.SP500.value:
             sp500_tickers: List = pd.read_html(
                 "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             )[0]["Symbol"].tolist()
             for ticker in sp500_tickers:
                 self.assets.add(Stock(ticker=ticker))
-        if self.name == "NASDAQ100":
+        if self.name == Indexes.NASDAQ100.value:
             nasdaq100_tickers = pd.read_html("https://en.wikipedia.org/wiki/Nasdaq-100")[
                 3
             ]["Ticker"].tolist()

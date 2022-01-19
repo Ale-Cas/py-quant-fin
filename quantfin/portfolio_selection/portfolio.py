@@ -35,7 +35,7 @@ class Portfolio:
                 cash.value = 0.0
             self.holdings[cash] = cash.value
         assert (
-            1.0 - float(sum(self.holdings.values())) < 1e-4
+            float(sum(self.holdings.values())) - 1.0 < 1e-4
         ), f"Holding weights should sum to one, not {float(sum(self.holdings.values()))}."
 
     @property
