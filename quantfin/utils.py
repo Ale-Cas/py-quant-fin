@@ -1,8 +1,9 @@
 """This module provides utilities."""
 from enum import Enum
 from typing import Any, List
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 
 class ListEnum(Enum):
