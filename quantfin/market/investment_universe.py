@@ -10,7 +10,7 @@ from warnings import warn
 import pandas as pd
 import yfinance as yf
 
-from quantfin.market.assets import Stock, Indexes
+from quantfin.market.assets import Indexes, Stock
 
 
 class InvestmentUniverse:
