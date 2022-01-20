@@ -82,10 +82,10 @@ class BlackScholes(PricingModel):
 
     def calculate_option_price(
         self,
-        option_type: OptionTypes = OptionTypes.CALL.value,
+        option_type: OptionTypes = OptionTypes.CALL,
     ) -> float:
         """Returns the option price."""
-        if option_type == OptionTypes.CALL.value:
+        if option_type == OptionTypes.CALL:
             option_price = self.last_price * stats.norm.cdf(
                 self.d1
             ) - self.strike_price * np.exp(
@@ -93,7 +93,7 @@ class BlackScholes(PricingModel):
             ) * stats.norm.cdf(
                 self.d2
             )
-        if option_type == OptionTypes.PUT.value:
+        if option_type == OptionTypes.PUT:
             option_price = -self.last_price * stats.norm.cdf(
                 -self.d1
             ) + self.strike_price * np.exp(
