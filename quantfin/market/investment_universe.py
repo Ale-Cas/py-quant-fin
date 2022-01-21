@@ -8,9 +8,46 @@ from typing import Dict, List, Optional, Set, Union
 from warnings import warn
 
 import pandas as pd
+import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
-from quantfin.market.assets import Stock, Indexes
+from quantfin.market.assets import Indexes, Stock
+
+
+def scrape_largest_companies(num_pages: int = 58) -> pd.DataFrame:
+    """Scrapes name, ticker symbols and country of top companies based on market cap.
+
+    Parameters
+    ----------
+    num_pages: int
+        number of pages to scrape, each page has 100 symbols, max is
+
+    Returns
+    -------
+        A pandas DataFrame
+    """
+    list_tickers: List[str] = []
+    list_names: List[str] = []
+    list_countries: List[str] = []
+    for num_page in range(num_pages):
+        url = f"https://companiesmarketcap.com/page/{num_page+1}/"
+        html = requests.get(url).text
+        soup = BeautifulSoup(html, "html.parser")
+        list_ticker_page = [e.text for e in soup.select("div.company-code")]
+        list_names_page = [e.text for e in soup.select("div.company-name")]
+        list_countries_page = [e.text for e in soup.select("span.responsive-hidden")]
+        list_countries_page = list_countries_page[1:]
+        list_tickers = list_tickers + list_ticker_page
+        list_names = list_names + list_names_page
+        list_countries = list_countries + list_countries_page
+        companies_dict = {
+            "Name": list_names,
+            "Ticker": list_tickers,
+            "Country": list_countries,
+        }
+
+    return pd.DataFrame(companies_dict, columns=companies_dict.keys())
 
 
 class InvestmentUniverse:
