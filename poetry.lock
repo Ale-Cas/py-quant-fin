@@ -1696,13 +1696,8 @@ requests = ">=2.26"
 
 [metadata]
 lock-version = "1.1"
-<<<<<<< HEAD
-python-versions = "^3.9"
-content-hash = "f4fec22d8178ef27c0d62774398c17985a4d156891771f67ea5adb8765508093"
-=======
 python-versions = "^3.9,<3.11"
 content-hash = "945f4a6f26d17f75e11012c50c8db1e54a5d065a4771d0aa0a674c86a9b992f7"
->>>>>>> 7ea8583e587136ec3d87fb7c74b7659c6985abcc
 
 [metadata.files]
 altair = [
