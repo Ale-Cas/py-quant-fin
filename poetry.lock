@@ -1009,6 +1009,18 @@ python-versions = "*"
 ptyprocess = ">=0.5"
 
 [[package]]
+name = "pgcopy"
+version = "1.5.0"
+description = "Fast db insert with postgresql binary copy"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+psycopg2 = "*"
+pytz = "*"
+
+[[package]]
 name = "pickleshare"
 version = "0.7.5"
 description = "Tiny 'shelve'-like database with concurrency support"
@@ -1739,7 +1751,7 @@ requests = ">=2.26"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9,<3.11"
-content-hash = "8d350a0422aac6ee6f6aad46ba689be7f1d73b1fd97a21784d6af0f34013c4c2"
+content-hash = "1fafc51513a64679bec72e31c51f04075824d3d8d5a636863f700c09bb03d798"
 
 [metadata.files]
 altair = [
@@ -2511,6 +2523,10 @@ pathspec = [
 pexpect = [
     {file = "pexpect-4.8.0-py2.py3-none-any.whl", hash = "sha256:0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"},
     {file = "pexpect-4.8.0.tar.gz", hash = "sha256:fc65a43959d153d0114afe13997d439c22823a27cefceb5ff35c2178c6784c0c"},
+]
+pgcopy = [
+    {file = "pgcopy-1.5.0-py2.py3-none-any.whl", hash = "sha256:4b0451a4dbbd4c74ed148c2f831df10be2e2368ee0f62115c24f5a2f76ed2528"},
+    {file = "pgcopy-1.5.0.tar.gz", hash = "sha256:a616af868720cbb805ef92922d44ed4044e9e813a9a4666763c630b0dab8b4fb"},
 ]
 pickleshare = [
     {file = "pickleshare-0.7.5-py2.py3-none-any.whl", hash = "sha256:9649af414d74d4df115d5d718f82acb59c9d418196b7b4290ed47a12ce62df56"},

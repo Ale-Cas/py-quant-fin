@@ -42,9 +42,9 @@ def scrape_largest_companies(num_pages: int = 58) -> pd.DataFrame:
         list_names = list_names + list_names_page
         list_countries = list_countries + list_countries_page
         companies_dict = {
-            "Name": list_names,
-            "Ticker": list_tickers,
-            "Country": list_countries,
+            "ticker": list_tickers,
+            "name": list_names,
+            "country": list_countries,
         }
 
     return pd.DataFrame(companies_dict, columns=companies_dict.keys())
