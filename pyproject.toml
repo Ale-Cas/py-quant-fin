@@ -21,6 +21,7 @@ matplotlib = "^3.5.1"
 plotly = "^5.5.0"
 psycopg2 = "^2.9.3"
 scipy = "^1.7.3"
+beautifulsoup4 = "^4.10.0"
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.12"
