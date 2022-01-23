@@ -33,12 +33,18 @@ def populate_prices_table() -> None:
         cur.execute(create_prices_table_sql)
         cur.execute(query=sql_query)
         rows = cur.fetchall()
-        for id, ticker in rows[:100]:
+        for id, ticker in rows[98:]:
             yfticker = yf.Ticker(ticker)
             prices = yfticker.history(period="max", auto_adjust=False)
+            if prices.empty:
+                continue
             prices["assets_id"] = id
             prices["ticker"] = ticker
-            prices.index = prices.index.date
+            try:
+                prices.index = prices.index.date
+            except Exception as e:
+                print(ticker + str(e) + str(e.__class__))
+                pass
             prices.index = prices.index.rename("time")
             prices = prices.rename(
                 columns={
@@ -63,6 +69,7 @@ def populate_prices_table() -> None:
                 connection.rollback()
             except Exception as e:
                 print(str(e.__class__) + str(e) + " when inserting")
+            connection.commit()
         # mgr = CopyManager(conn=connection, table="prices", cols=prices.columns)
         # mgr.copy([row for row in prices.itertuples(index=True, name=None)])
         connection.commit()
