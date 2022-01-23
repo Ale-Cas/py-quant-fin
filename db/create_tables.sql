@@ -1,10 +1,11 @@
-CREATE TABLE assets (
+CREATE TABLE IF NOT EXISTS assets (
     id SERIAL PRIMARY KEY,
     ticker TEXT NOT NULL,
     name TEXT NOT NULL,
     exchange TEXT NULL,
     country TEXT NULL,
-    is_etf BOOLEAN NOT NULL
+    is_etf BOOLEAN NOT NULL,
+    UNIQUE(ticker)
 );
 
 
