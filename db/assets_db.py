@@ -1,6 +1,5 @@
 """This module implements tools to interact with TimescaleDB."""
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import config
 
@@ -27,7 +26,7 @@ class DataBase(ABC):
         pass
 
     @abstractmethod
-    def close_connection(self) -> None:
+    def disconnect(self) -> None:
         pass
 
 
