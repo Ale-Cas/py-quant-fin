@@ -1,6 +1,8 @@
 """This module implements tools to interact with TimescaleDB."""
 from abc import ABC, abstractmethod
 
+import psycopg2
+
 import config
 
 
@@ -47,3 +49,20 @@ class TimescaleDB(DataBase):
             password,
             db_type="TimescaleDB",
         )
+
+    def connect(self) -> None:
+        """Open the connection with the db object and instantiate cursor."""
+        self.connection = psycopg2.connect(
+            host=self.host,
+            database=self.name,
+            user=self.user,
+            password=self.password,
+        )
+        self.cursor = self.connection.cursor()
+
+    def disconnect(self) -> None:
+        """Close the connection with the db object and cursor."""
+        try:
+            self.connection.close()
+        except AttributeError:
+            print("""You must be connected to the database to disconnect from it.""")
