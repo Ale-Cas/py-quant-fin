@@ -1,3 +1,6 @@
+# DB Stuff
+/test_db.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -75,6 +78,7 @@ docs/_build/
 target/
 
 # Jupyter Notebook
+.ipynb
 .ipynb_checkpoints
 
 # IPython
