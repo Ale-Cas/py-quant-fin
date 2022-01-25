@@ -13,6 +13,11 @@ def test_db_connection() -> None:
     assert db.connection
 
 
+def test_db_invalid_connection() -> None:
+    db = TimescaleDB(password="1234")
+    db.connect()
+
+
 def test_db_assert_disconnection() -> None:
     db = TimescaleDB()
     db.disconnect()
