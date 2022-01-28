@@ -10,8 +10,8 @@ from dateutil.relativedelta import relativedelta
 import plotly.graph_objects as go
 import streamlit as st
 
-from quantfin.market.investment_universe import InvestmentUniverse
-from quantfin.market.assets import AssetClasses, Indexes
+from quantfin.market.investment_universe import InvestmentUniverse, Indexes
+from quantfin.market.assets import AssetClasses
 from quantfin.portfolio_selection.strategies import PortfolioStrategies
 from quantfin.portfolio_selection.portfolio_optimization import (
     ConstraintType,

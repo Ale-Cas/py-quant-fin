@@ -12,7 +12,15 @@ import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
 
-from quantfin.market.assets import Indexes, Stock
+from quantfin.utils import ListEnum
+from quantfin.market.assets import Stock
+
+
+class Indexes(str, ListEnum):
+    """List of supported indexes."""
+
+    SP500 = "S&P 500"
+    NASDAQ100 = "NASDAQ 100"
 
 
 def scrape_largest_companies(num_pages: int = 58) -> pd.DataFrame:
@@ -191,7 +199,7 @@ class InvestmentUniverse:
 
         if not kwargs:
             self.prices = yf.download(
-                tickers=[str(asset) for asset in self.assets],
+                tickers=[str(asset.ticker) for asset in self.assets],
                 group_by="Ticker",
                 period="max",
                 auto_adjust=True,
@@ -200,7 +208,7 @@ class InvestmentUniverse:
             for key in kwargs:
                 if key in _valid_arguments:
                     self.prices = yf.download(
-                        tickers=[str(asset) for asset in self.assets],
+                        tickers=[str(asset.ticker) for asset in self.assets],
                         **kwargs,
                     )
                 else:

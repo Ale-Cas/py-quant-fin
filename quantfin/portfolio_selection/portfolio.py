@@ -3,6 +3,7 @@ Created on Jan 3, 2022
 @author: AC
 """
 
+from locale import currency
 from optparse import Option
 from typing import Dict, Optional, Set, Union
 
@@ -18,28 +19,28 @@ class Portfolio:
     def __init__(
         self,
         name: Optional[str] = None,
-        long_only: Optional[bool] = None,
-        holdings: Optional[Dict[assets.IAsset, float]] = None,
+        long_only: bool = True,
+        currency: assets.Currencies = assets.Currencies.EUR,
+        holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
     ):
         self.name = name
-        self.long_only: bool = long_only or True
-        self.holdings: Dict[assets.IAsset, float] = holdings or {
-            assets.Cash(): assets.Cash.value
-        }
+        self.long_only = long_only
+        self.currency = currency
+        self.holdings = holdings or {assets.Cash(currency=self.currency): 1.0}
         self.assets_returns = assets_returns
-        if assets.Cash() not in self.holdings:
+        cash = assets.Cash(currency=self.currency)
+        if cash not in self.holdings:
             # if cash is not specified in the holdings automatically compute it
-            cash = assets.Cash(value=1.0 - np.abs(float(sum(self.holdings.values()))))
-            if cash.value < 1e-4:
-                cash.value = 0.0
-            self.holdings[cash] = cash.value
+            self.holdings[cash] = 1.0 - np.abs(float(sum(self.holdings.values())))
+            if self.holdings[cash] < 1e-4:
+                self.holdings[cash] = 0.0
         assert (
             float(sum(self.holdings.values())) - 1.0 < 1e-4
         ), f"Holding weights should sum to one, not {float(sum(self.holdings.values()))}."
 
     @property
-    def nonzero_holdings(self) -> Dict[assets.IAsset, float]:
+    def nonzero_holdings(self) -> Dict[assets.Asset, float]:
         """Dictionary of portfolio holdings."""
         return {
             asset: weight
@@ -48,12 +49,12 @@ class Portfolio:
         }
 
     @property
-    def instruments(self) -> Set[Union[assets.Cash, assets.IAsset]]:
+    def instruments(self) -> Set[Union[assets.Cash, assets.Asset]]:
         """Set of portfolio instruments."""
         return {
             asset
             for asset in self.holdings.keys()
-            if (isinstance(asset, assets.IAsset) and self.holdings[asset] != 0.0)
+            if (isinstance(asset, assets.Asset) and self.holdings[asset] != 0.0)
         }
 
     @property
@@ -66,7 +67,7 @@ class Portfolio:
         """Cash in portfolio."""
         for asset in self.holdings.keys():
             if isinstance(asset, assets.Cash):
-                cash = {asset.currency: asset.value}
+                cash = {asset: self.holdings[asset]}
             else:
                 cash = {assets.Cash.currency: 0.0}
         return cash
@@ -140,11 +141,12 @@ class OptimalPortfolio(Portfolio):
         self,
         name: Optional[str] = None,
         long_only: Optional[bool] = None,
-        holdings: Optional[Dict[assets.IAsset, float]] = None,
+        currency: assets.Currencies = assets.Currencies.EUR,
+        holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
         objective_function: Optional[str] = None,
         start_holding_date: Optional[pd.Timestamp] = None,
     ):
-        super().__init__(name, long_only, holdings, assets_returns)
+        super().__init__(name, long_only, currency, holdings, assets_returns)
         self.objective_function = objective_function
         self.start_holding_date = start_holding_date
