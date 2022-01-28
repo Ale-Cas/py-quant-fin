@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import pandas as pd
 
@@ -67,11 +67,15 @@ class Asset(ABC):
     def __hash__(self) -> int:
         return hash(self.ticker)
 
-    def __eq__(self, other: Asset):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Asset):
+            return NotImplemented
         return (self.ticker) == (other.ticker)
 
-    def __ne__(self, other: Asset):
-        return not (self == other)
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, Asset):
+            return NotImplemented
+        return not self == other
 
     @abstractmethod
     def is_in_index(self):
@@ -83,21 +87,23 @@ class Asset(ABC):
         """Checks if an asset is part of the specified InvestmentUniverse"""
         raise NotImplementedError("This is an abstract method")
 
-    @abstractmethod
-    def is_in_portfolio(self):
+    def is_in_portfolio(self, portfolio: Portfolio) -> bool:
         """Checks if an asset is part of the specified Portfolio"""
-        raise NotImplementedError("This is an abstract method")
+        return bool(self in portfolio.nonzero_holdings)
 
-    @abstractmethod
-    def get_weight_in_portfolio(self):
+    def get_weight_in_portfolio(self, portfolio: Portfolio) -> float:
         """Retrieves the weight of the Asset in the specified Portfolio"""
-        raise NotImplementedError("This is an abstract method")
+        weight_in_ptf = 0.0
+        if self in portfolio.nonzero_holdings:
+            weight_in_ptf = portfolio.nonzero_holdings[self]
+        return weight_in_ptf
 
 
 class Cash(Asset):
     """This class represents Cash."""
 
-    def __init__(self, currency: Currencies = Currencies.EUR.value) -> None:
+    def __init__(self, currency: Union[str, Currencies] = Currencies.EUR.value) -> None:
+        super().__init__()
         self.currency = currency
 
     def __repr__(self) -> str:
@@ -109,25 +115,15 @@ class Cash(Asset):
     def __hash__(self) -> int:
         return hash(str(self.currency))
 
-    def __eq__(self, other: Cash):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Cash):
+            return NotImplemented
         return (self.currency) == (other.currency)
 
-    def __ne__(self, other):
-        return not (self == other)
-
-    def is_in_portfolio(self, portfolio: Portfolio) -> bool:
-        """Checks if cash is part of the specified Portfolio"""
-        if self in portfolio.nonzero_holdings:
-            return True
-        else:
-            return False
-
-    def get_weight_in_portfolio(self, portfolio: Portfolio) -> float:
-        """Retrieves the weight of the Asset in the specified Portfolio"""
-        if self in portfolio.nonzero_holdings:
-            return portfolio.nonzero_holdings[self]
-        else:
-            return 0.0
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, Cash):
+            return NotImplemented
+        return not self == other
 
     def is_in_index(self):
         """Checks if an asset is part of the specified index"""
@@ -176,17 +172,3 @@ class Stock(Asset):
     def is_in_universe(self):
         """Checks if an asset is part of the specified InvestmentUniverse"""
         raise NotImplementedError("Not yet implemented")
-
-    def is_in_portfolio(self, portfolio: Portfolio) -> bool:
-        """Checks if an asset is part of the specified Portfolio"""
-        if self in portfolio.nonzero_holdings:
-            return True
-        else:
-            return False
-
-    def get_weight_in_portfolio(self, portfolio: Portfolio) -> bool:
-        """Retrieves the weight of the Asset in the specified Portfolio"""
-        if self in portfolio.nonzero_holdings:
-            return portfolio.nonzero_holdings[self]
-        else:
-            return 0.0

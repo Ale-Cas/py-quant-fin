@@ -63,13 +63,13 @@ class Portfolio:
         return len(self.instruments)
 
     @property
-    def cash(self) -> Dict[str, float]:
+    def cash(self) -> Dict[assets.Cash, float]:
         """Cash in portfolio."""
         for asset in self.holdings.keys():
             if isinstance(asset, assets.Cash):
                 cash = {asset: self.holdings[asset]}
             else:
-                cash = {assets.Cash.currency: 0.0}
+                cash = {assets.Cash(): 0.0}
         return cash
 
     def get_returns(self) -> pd.DataFrame:
@@ -140,7 +140,7 @@ class OptimalPortfolio(Portfolio):
     def __init__(
         self,
         name: Optional[str] = None,
-        long_only: Optional[bool] = None,
+        long_only: bool = True,
         currency: assets.Currencies = assets.Currencies.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
