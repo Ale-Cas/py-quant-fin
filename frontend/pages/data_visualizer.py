@@ -29,9 +29,7 @@ def app() -> None:
     # INPUTs:
     st.sidebar.title("Parameters")
 
-    asset_class = st.selectbox(
-        label="Choose an asset class", options=AssetClasses.list()
-    )
+    asset_class = st.selectbox(label="Choose an asset class", options=AssetClasses.list())
     # asset_ticker = st.text_input(label="Enter an asset ticker", value="AAPL")
 
     # PROCESSING:

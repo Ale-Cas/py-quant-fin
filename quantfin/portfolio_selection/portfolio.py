@@ -3,8 +3,6 @@ Created on Jan 3, 2022
 @author: AC
 """
 
-from locale import currency
-from optparse import Option
 from typing import Dict, Optional, Set, Union
 
 import numpy as np
@@ -20,7 +18,7 @@ class Portfolio:
         self,
         name: Optional[str] = None,
         long_only: bool = True,
-        currency: assets.Currencies = assets.Currencies.EUR,
+        currency: assets.Currency = assets.Currency.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
     ):
@@ -141,7 +139,7 @@ class OptimalPortfolio(Portfolio):
         self,
         name: Optional[str] = None,
         long_only: bool = True,
-        currency: assets.Currencies = assets.Currencies.EUR,
+        currency: assets.Currency = assets.Currency.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
         objective_function: Optional[str] = None,

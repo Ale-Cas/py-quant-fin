@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from quantfin.portfolio_selection.portfolio import Portfolio
 
 
-class Currencies(str, ListEnum):
+class Currency(str, ListEnum):
     """List of supported currencies."""
 
     EUR = "EUR"
@@ -102,7 +102,7 @@ class Asset(ABC):
 class Cash(Asset):
     """This class represents Cash."""
 
-    def __init__(self, currency: Union[str, Currencies] = Currencies.EUR.value) -> None:
+    def __init__(self, currency: Union[str, Currency] = Currency.EUR.value) -> None:
         super().__init__()
         self.currency = currency
 
