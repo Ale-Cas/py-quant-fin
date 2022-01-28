@@ -12,7 +12,24 @@ import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
 
-from quantfin.market.assets import Indexes, Stock
+from quantfin.utils import ListEnum
+from quantfin.market.assets import Stock
+
+
+class MarketIndex(str, ListEnum):
+    """List of supported indexes."""
+
+    SP500 = "S&P 500"
+    NASDAQ100 = "NASDAQ 100"
+
+
+class PriceType(str, ListEnum):
+    """List of supported prices."""
+
+    OPEN = "Open"
+    HIGH = "High"
+    LOW = "Low"
+    CLOSE = "Close"
 
 
 def scrape_largest_companies(num_pages: int = 58) -> pd.DataFrame:
@@ -57,50 +74,43 @@ class InvestmentUniverse:
 
     def __init__(
         self,
-        name: str,
+        name: Optional[str] = None,
+        reference_index: Optional[Union[str, MarketIndex]] = None,
+        countries: Optional[List[str]] = None,
         assets: Optional[Set[Stock]] = None,
-        prices: pd.DataFrame = None,
+        prices: Optional[pd.DataFrame] = None,
     ) -> None:
-        if name in Indexes.list():
-            self.name = name
+        self.name = name
+        if reference_index in MarketIndex.list():
+            self.reference_index = reference_index
         else:
             raise ValueError(
                 f"""Inappropriate universe name, 
-                supported universe names are: {",".join(Indexes.list())}"""
+                supported universe names are: {",".join(MarketIndex.list())}"""
             )
+        self.countries = countries
         self.assets = assets or self.get_assets()
         self.prices = prices or pd.DataFrame()
 
     def get_assets(
         self,
-        source: str = "Wikipedia",
     ) -> Set[Stock]:
         """
-        Get historical prices from the data source specified during the initialisation.
-
-        Parameters
-        ----------
-        source : str
-                Valid sources: Wikipedia
+        Get assets in the universe.
 
         Returns
         -------
         self.assets
             A set[Stock]
         """
-        VALID_SOURCES = {"Wikipedia"}  # pylint: disable=invalid-name
-        if source not in VALID_SOURCES:
-            raise ValueError(
-                f"""The source is not valid, supported ones are: {VALID_SOURCES}"""
-            )
         self.assets = set()
-        if self.name == Indexes.SP500.value:
+        if self.reference_index == MarketIndex.SP500.value:
             sp500_tickers: List = pd.read_html(
                 "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             )[0]["Symbol"].tolist()
             for ticker in sp500_tickers:
                 self.assets.add(Stock(ticker=ticker))
-        if self.name == Indexes.NASDAQ100.value:
+        if self.reference_index == MarketIndex.NASDAQ100.value:
             nasdaq100_tickers = pd.read_html("https://en.wikipedia.org/wiki/Nasdaq-100")[
                 3
             ]["Ticker"].tolist()
@@ -114,7 +124,7 @@ class InvestmentUniverse:
         **kwargs,
     ) -> Union[Dict[Stock, pd.DataFrame], pd.DataFrame]:
         """
-        Get historical prices from the data source specified during the initialisation.
+        Get historical prices from Yahoo Finance.
 
         Parameters
         ----------
@@ -122,8 +132,6 @@ class InvestmentUniverse:
             Valid columns: "Open","High","Low","Close","Volume"
             If you want to see also "Dividends","Stock Splits"
             Please put actions=True
-        tickers : str, list
-            List of tickers to download
         period : str
             Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
             Either Use period parameter or use start and end
@@ -162,15 +170,6 @@ class InvestmentUniverse:
         prices
             A pd.DataFrame containing historical prices for the specified parameters
         """
-        VALID_PRICE_COLUMNS = {  # pylint: disable=invalid-name
-            "Open",
-            "High",
-            "Low",
-            "Close",
-            "Volume",
-            "Dividends",
-            "Stock Splits",
-        }
         _valid_arguments = {
             "tickers",
             "period",
@@ -186,12 +185,9 @@ class InvestmentUniverse:
             "show_errors",
             "timeout",
         }
-        if not self.prices.empty:
-            warn("Warning: prices has already been defined!")
-
         if not kwargs:
             self.prices = yf.download(
-                tickers=[str(asset) for asset in self.assets],
+                tickers=[str(asset.ticker) for asset in self.assets],
                 group_by="Ticker",
                 period="max",
                 auto_adjust=True,
@@ -200,21 +196,25 @@ class InvestmentUniverse:
             for key in kwargs:
                 if key in _valid_arguments:
                     self.prices = yf.download(
-                        tickers=[str(asset) for asset in self.assets],
+                        tickers=[str(asset.ticker) for asset in self.assets],
+                        group_by="Ticker",
                         **kwargs,
                     )
                 else:
-                    message = f"""Warning: Please provide a valid keyword, 
-                         valid ones are: {_valid_arguments}, 
-                         otherwise will be ignored"""
+                    message = (
+                        "Warning: Please provide a valid keyword, "
+                        + f"valid ones are: {_valid_arguments}, "
+                        + "otherwise will be ignored"
+                    )
                     warn(message=message)
         if prices_column is not None:
-            if prices_column not in VALID_PRICE_COLUMNS:
-                warn(
-                    f"""Warning: price_column not supported,
-                    must be one of: {VALID_PRICE_COLUMNS},
-                    otherwise will be like the argument was not provided"""
+            if prices_column not in PriceType.list():
+                message = (
+                    "Warning: Please provide a column name, "
+                    + f"valid ones are: {PriceType.list()}, "
+                    + "otherwise will be ignored"
                 )
+                warn(message=message)
             else:
                 self.prices = self.prices.xs(prices_column, level=1, axis=1)
 

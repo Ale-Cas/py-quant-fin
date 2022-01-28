@@ -1,9 +1,14 @@
 """
 Test assets module.
 """
-from quantfin.market import assets
+from quantfin.market.assets import Asset, Stock
 
 
 def test_stock_init() -> None:
-    stock = assets.Stock()
-    assert isinstance(stock, assets.Stock)
+    stock = Stock()
+    assert isinstance(stock, Stock)
+
+
+def test_stock_repr() -> None:
+    stock = Stock()
+    assert isinstance(stock, Stock)
