@@ -20,13 +20,13 @@ class Portfolio:
         long_only: bool = True,
         currency: assets.Currency = assets.Currency.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
-        assets_returns: Optional[pd.DataFrame] = None,
+        assets_returns: pd.DataFrame = pd.DataFrame(),
     ):
         self.name = name
         self.long_only = long_only
         self.currency = currency
         self.holdings = holdings or {assets.Cash(currency=self.currency): 1.0}
-        self.assets_returns = assets_returns or pd.DataFrame()
+        self.assets_returns = assets_returns
         cash = assets.Cash(currency=self.currency)
         if cash not in self.holdings:
             # if cash is not specified in the holdings automatically compute it
@@ -72,12 +72,12 @@ class Portfolio:
 
     def get_returns(self) -> pd.DataFrame:
         """Not yet implemented."""
-        if self.assets_returns:
+        if not self.assets_returns.empty:
             print("Asset's returns were already provided.")
-            return self.assets_returns
-        # else:
-        # call the asset's get_returns method
-        return pd.DataFrame()
+        else:
+            for asset in self.holdings.keys():
+                self.assets_returns[asset] = asset.prices
+        return self.assets_returns
 
     @property
     def variance(self):

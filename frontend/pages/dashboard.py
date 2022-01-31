@@ -9,10 +9,12 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+# import plotly.graph_objects as go
+
 from quantfin.market.assets import AssetClasses, Stock
 from quantfin.market.investment_universe import scrape_largest_companies
 
-title = "Data Visualization"
+title = "Dashboard"
 
 
 def app() -> None:
@@ -22,14 +24,18 @@ def app() -> None:
         """
              # Data Analysis Dashboard
              
-             Please provide an asset ticker to display historical data.
+             Please provide an asset name to display historical data.
              """
     )
 
     # INPUTs:
     st.sidebar.title("Parameters")
+    col1, col2, col3 = st.columns(3)
 
-    asset_class = st.selectbox(label="Choose an asset class", options=AssetClasses.list())
+    with col1:
+        asset_class = st.selectbox(
+            label="Choose an asset class", options=AssetClasses.list()
+        )
     # asset_ticker = st.text_input(label="Enter an asset ticker", value="AAPL")
 
     # PROCESSING:
@@ -45,16 +51,21 @@ def app() -> None:
         number_of_stocks = st.sidebar.number_input(
             label="Number of stocks", min_value=100, max_value=5800, value=1000
         )
-        companies_df = get_global_stocks(
-            hundred_results=int(np.ceil(number_of_stocks / 100))
-        )
-        country = st.selectbox(
-            label="Choose a country", options=companies_df["country"].unique()
-        )
-        stock_name = st.selectbox(
-            label="Choose a stock",
-            options=companies_df.loc[companies_df["country"] == str(country)]["name"],
-        )
+        with st.spinner("Getting companies..."):
+            companies_df = get_global_stocks(
+                hundred_results=int(np.ceil(number_of_stocks / 100))
+            )
+        with col2:
+            country = st.selectbox(
+                label="Choose a country", options=companies_df["country"].unique()
+            )
+        with col3:
+            stock_name = st.selectbox(
+                label="Choose a stock",
+                options=companies_df.loc[companies_df["country"] == str(country)][
+                    "name"
+                ],
+            )
         stock = Stock(
             name=str(stock_name),
             ticker=companies_df.loc[companies_df["name"] == str(stock_name)][
@@ -70,7 +81,8 @@ def app() -> None:
             """Get prices from Yahoo Finance"""
             return yf.Ticker(ticker=stock.ticker).history(period=period)
 
-        stock.prices = get_prices(stock=stock)
+        with st.spinner("Getting prices..."):
+            stock.prices = get_prices(stock=stock)
 
     else:
         raise NotImplementedError("Not implemented yet.")
@@ -78,14 +90,26 @@ def app() -> None:
     # OUTPUT:
     st.write(
         """
-             ### Closing Prices
+             ### Candlesticks
         """
     )
-    st.line_chart(stock.prices["Close"])
-
+    st.line_chart(stock.prices[["Open", "High", "Low", "Close"]])
+    # fig = go.Figure()
+    # fig.add_trace(
+    #     go.Candlestick(
+    #         x=stock.prices.index,
+    #         open=stock.prices["Open"],
+    #         high=stock.prices["High"],
+    #         low=stock.prices["Low"],
+    #         close=stock.prices["Close"],
+    #     )
+    # )
+    # st.plotly_chart(fig)
     st.write(
         """
              ### Volume
         """
     )
     st.line_chart(stock.prices["Volume"])
+
+    st.dataframe(stock.prices)
