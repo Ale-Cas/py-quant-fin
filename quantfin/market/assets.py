@@ -68,13 +68,17 @@ class Asset(ABC):
         return hash(self.ticker)
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Asset):
+        if not isinstance(other, (Asset, str)):
             return NotImplemented
+        if isinstance(other, str):
+            return self.ticker == other
         return (self.ticker) == (other.ticker)
 
     def __ne__(self, other: object) -> bool:
-        if not isinstance(other, Asset):
+        if not isinstance(other, (Asset, str)):
             return NotImplemented
+        if isinstance(other, str):
+            return not self.ticker == other
         return not self == other
 
     @abstractmethod

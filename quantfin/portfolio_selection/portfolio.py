@@ -20,7 +20,7 @@ class Portfolio:
         long_only: bool = True,
         currency: assets.Currency = assets.Currency.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
-        assets_returns: Optional[pd.DataFrame] = None,
+        assets_returns: pd.DataFrame = pd.DataFrame(),
     ):
         self.name = name
         self.long_only = long_only
@@ -72,20 +72,37 @@ class Portfolio:
 
     def get_returns(self) -> pd.DataFrame:
         """Not yet implemented."""
-        if self.assets_returns:
+        if not self.assets_returns.empty:
             print("Asset's returns were already provided.")
-            return self.assets_returns
-        # else:
-        # call the asset's get_returns method
-        return pd.DataFrame()
+        else:
+            for asset in self.holdings.keys():
+                self.assets_returns[asset] = asset.prices
+        return self.assets_returns
 
     @property
     def variance(self):
-        pass
+        # FIXME: Like this is very slow and inefficient -> O(n^2)
+        # TODO: at least cache the property
+        ptf_var = 0
+        for col in self.assets_returns.cov().columns:
+            for row in self.assets_returns.cov().index:
+                ptf_var += (
+                    self.holdings[col]
+                    * self.assets_returns.cov()[col][row]
+                    * self.holdings[row]
+                )
+        return ptf_var
 
-    # @property
-    # def expected_return(self) -> float:
-    #     pass
+    @property
+    def expected_return(self) -> float:
+        assert not self.assets_returns.empty, "Asset returns must be provided."
+        exp_ret = 0
+        for asset, weight in self.holdings.items():
+            if isinstance(asset, assets.Cash):
+                continue
+            else:
+                exp_ret += weight * self.assets_returns.mean()[asset.ticker]
+        return exp_ret
 
     # @property
     # def sharpe_ratio(self) -> float:

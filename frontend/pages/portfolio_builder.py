@@ -94,12 +94,13 @@ def app() -> None:
             prices_column=price_type, start=start_date, end=end_date
         )
 
-    univ.prices = get_univ_prices(
-        universe=univ,
-        price_type=prices_column,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    with st.spinner("Getting prices..."):
+        univ.prices = get_univ_prices(
+            universe=univ,
+            price_type=prices_column,
+            start_date=start_date,
+            end_date=end_date,
+        )
     with col2:
 
         ptf_strategy = st.selectbox(

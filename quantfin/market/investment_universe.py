@@ -170,21 +170,6 @@ class InvestmentUniverse:
         prices
             A pd.DataFrame containing historical prices for the specified parameters
         """
-        _valid_arguments = {
-            "tickers",
-            "period",
-            "interval",
-            "start",
-            "end",
-            "group_by",
-            "actions",
-            "prepost",
-            "auto_adjust",
-            "proxy",
-            "rounding",
-            "show_errors",
-            "timeout",
-        }
         if not kwargs:
             self.prices = yf.download(
                 tickers=[str(asset.ticker) for asset in self.assets],
@@ -193,20 +178,11 @@ class InvestmentUniverse:
                 auto_adjust=True,
             )
         else:
-            for key in kwargs:
-                if key in _valid_arguments:
-                    self.prices = yf.download(
-                        tickers=[str(asset.ticker) for asset in self.assets],
-                        group_by="Ticker",
-                        **kwargs,
-                    )
-                else:
-                    message = (
-                        "Warning: Please provide a valid keyword, "
-                        + f"valid ones are: {_valid_arguments}, "
-                        + "otherwise will be ignored"
-                    )
-                    warn(message=message)
+            self.prices = yf.download(
+                tickers=[str(asset.ticker) for asset in self.assets],
+                group_by="Ticker",
+                **kwargs,
+            )
         if prices_column is not None:
             if prices_column not in PriceType.list():
                 message = (

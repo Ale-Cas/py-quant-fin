@@ -145,12 +145,14 @@ class OptimizationModel:
         for ticker in self.returns.columns:
             stocks.append(assets.Stock(ticker=ticker))
         opt_holdings: Dict[assets.Asset, float] = dict(zip(stocks, weights))
+
         for asset, weight in opt_holdings.items():
             if weight > 0 and weight < 1e-4:
                 opt_holdings[asset] = 0.0
         return OptimalPortfolio(
             name=f"Min {self.objective_type.value} Portfolio",
             holdings=opt_holdings,
+            assets_returns=self.returns,
             objective_function=ObjectiveType.VARIANCE.value,
         )
 
