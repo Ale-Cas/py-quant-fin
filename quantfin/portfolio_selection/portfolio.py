@@ -26,7 +26,7 @@ class Portfolio:
         self.long_only = long_only
         self.currency = currency
         self.holdings = holdings or {assets.Cash(currency=self.currency): 1.0}
-        self.assets_returns = assets_returns
+        self.assets_returns = assets_returns or pd.DataFrame()
         cash = assets.Cash(currency=self.currency)
         if cash not in self.holdings:
             # if cash is not specified in the holdings automatically compute it
@@ -81,11 +81,28 @@ class Portfolio:
 
     @property
     def variance(self):
-        pass
+        # FIXME: Like this is very slow and inefficient -> O(n^2)
+        # TODO: at least cache the property
+        ptf_var = 0
+        for col in self.assets_returns.cov().columns:
+            for row in self.assets_returns.cov().index:
+                ptf_var += (
+                    self.holdings[col]
+                    * self.assets_returns.cov()[col][row]
+                    * self.holdings[row]
+                )
+        return ptf_var
 
-    # @property
-    # def expected_return(self) -> float:
-    #     pass
+    @property
+    def expected_return(self) -> float:
+        assert not self.assets_returns.empty, "Asset returns must be provided."
+        exp_ret = 0
+        for asset, weight in self.holdings.items():
+            if isinstance(asset, assets.Cash):
+                continue
+            else:
+                exp_ret += weight * self.assets_returns.mean()[asset.ticker]
+        return exp_ret
 
     # @property
     # def sharpe_ratio(self) -> float:
