@@ -4,6 +4,7 @@ Created on Jan 13, 2022
 
 This module provides the streamlit UI to download customized stock data.
 """
+from click import option
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -51,6 +52,33 @@ def app() -> None:
         number_of_stocks = st.sidebar.number_input(
             label="Number of stocks", min_value=100, max_value=5800, value=1000
         )
+        period = st.sidebar.selectbox(
+            label="Period",
+            options=[
+                "max",
+                "ytd",
+                "10y",
+                "5y",
+                "2y",
+                "1y",
+                "1d",
+                "5d",
+                "1mo",
+                "3mo",
+                "6mo",
+            ],
+        )
+        interval = st.sidebar.selectbox(
+            label="Interval",
+            options=[
+                "1d",
+                "1h",
+                "5d",
+                "1wk",
+                "1mo",
+                "3mo",
+            ],
+        )
         with st.spinner("Getting companies..."):
             companies_df = get_global_stocks(
                 hundred_results=int(np.ceil(number_of_stocks / 100))
@@ -76,13 +104,17 @@ def app() -> None:
             ].iloc[0],
         )
 
-        @st.cache(persist=True)
-        def get_prices(stock: Stock, period: str = "max") -> pd.DataFrame:
+        @st.cache(persist=True, allow_output_mutation=True)
+        def get_prices(
+            stock: Stock, period: str = "max", interval: str = "1d"
+        ) -> pd.DataFrame:
             """Get prices from Yahoo Finance"""
-            return yf.Ticker(ticker=stock.ticker).history(period=period)
+            return yf.Ticker(ticker=stock.ticker).history(
+                period=period, interval=interval
+            )
 
         with st.spinner("Getting prices..."):
-            stock.prices = get_prices(stock=stock)
+            stock.prices = get_prices(stock=stock, period=period, interval=interval)
 
     else:
         raise NotImplementedError("Not implemented yet.")
@@ -104,12 +136,16 @@ def app() -> None:
     #         close=stock.prices["Close"],
     #     )
     # )
-    # st.plotly_chart(fig)
-    st.write(
-        """
-             ### Volume
-        """
-    )
+    # st.plotly_chart(fig, use_container_width=True)
+    # st.write(
+    #     """
+    #          ### Volume
+    #     """
+    # )
     st.line_chart(stock.prices["Volume"])
-
+    if interval != "1h":
+        try:
+            stock.prices.index = stock.prices.index.date
+        except AttributeError:
+            pass
     st.dataframe(stock.prices)
