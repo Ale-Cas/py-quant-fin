@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-# import plotly.graph_objects as go
 
 from quantfin.market.assets import AssetClasses, Stock
 from quantfin.market.investment_universe import scrape_largest_companies
@@ -116,32 +115,43 @@ def app() -> None:
         with st.spinner("Getting prices..."):
             stock.prices = get_prices(stock=stock, period=period, interval=interval)
 
+        @st.cache(persist=True, allow_output_mutation=True)
+        def get_info(stock: Stock) -> dict:
+            return yf.Ticker(ticker=stock.ticker).info
+
+        @st.cache(persist=True, allow_output_mutation=True)
+        def get_news(stock: Stock) -> dict:
+            return yf.Ticker(ticker=stock.ticker).news
+
     else:
         raise NotImplementedError("Not implemented yet.")
 
     # OUTPUT:
+    with st.spinner("Getting company info..."):
+        info = get_info(stock=stock)
     st.write(
         """
-             ### Candlesticks
+             ## Business Summary
         """
     )
+    with st.expander("See business description"):
+        st.write(info["longBusinessSummary"])
+    col_1, col_2, col_3 = st.columns(3)
+    with col_1:
+        st.write("**Ticker**: ", stock.ticker)
+        st.write("**Website**: ", info["website"])
+    with col_2:
+        st.write("**Sector**: ", info["sector"])
+        st.write("**Industry**: ", info["industry"])
+    with col_3:
+        st.write(
+            "**Number of shares**: ",
+            str(round(info["sharesOutstanding"] / 1e6, 2)),
+            "milions",
+        )
+        st.write("**Market beta**: ", str(round(info["beta"], 2)))
+    st.write("## Prices")
     st.line_chart(stock.prices[["Open", "High", "Low", "Close"]])
-    # fig = go.Figure()
-    # fig.add_trace(
-    #     go.Candlestick(
-    #         x=stock.prices.index,
-    #         open=stock.prices["Open"],
-    #         high=stock.prices["High"],
-    #         low=stock.prices["Low"],
-    #         close=stock.prices["Close"],
-    #     )
-    # )
-    # st.plotly_chart(fig, use_container_width=True)
-    # st.write(
-    #     """
-    #          ### Volume
-    #     """
-    # )
     st.line_chart(stock.prices["Volume"])
     if interval != "1h":
         try:
@@ -149,3 +159,8 @@ def app() -> None:
         except AttributeError:
             pass
     st.dataframe(stock.prices)
+    # st.write(get_info(stock=stock))
+    news: list[dict] = get_news(stock=stock)
+    st.write("## Related news:")
+    for n in news:
+        st.markdown(f"[{n.get('title')}]({n.get('link')})")

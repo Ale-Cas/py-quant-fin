@@ -109,9 +109,8 @@ def app() -> None:
         )
         if ptf_strategy == "Portfolio Optimization":
 
-            objective_function = st.multiselect(
+            objective_function = st.selectbox(
                 label="Choose the optimization model",
-                default=ObjectiveType.VARIANCE.value,
                 options=ObjectiveType.list(),
             )
             risk_appetite = st.sidebar.number_input(
@@ -142,37 +141,37 @@ def app() -> None:
                 value=0.1,
             )
             with st.expander("See explanation"):
-                if ObjectiveType.VARIANCE.value in objective_function:
+                if objective_function == ObjectiveType.VARIANCE.value:
                     st.write(
                         """
                     The Portfolio Variance measures the squared distance of portfolio returns from the mean.
                 """
                     )
-                if ObjectiveType.MAD.value in objective_function:
+                if objective_function == ObjectiveType.MAD.value:
                     st.write(
                         """
                     The Portfolio MAD measures the absolute deviation of portfolio returns from the mean.
                 """
                     )
-                if ObjectiveType.CVAR.value in objective_function:
+                if objective_function == ObjectiveType.CVAR.value:
                     st.write(
                         """
                     The Portfolio Conditional Value-at-Risk measures the expected portfolio loss at a certain confidence level.
                 """
                     )
-            if len(objective_function) > 1:
-                weights_objectives = {}
-                for obj_fun in objective_function:
-                    weights_objectives[obj_fun] = st.sidebar.number_input(
-                        label=f"Choose the weight for {obj_fun}",
-                        min_value=0.0,
-                        max_value=1.0,
-                        value=1 / len(objective_function),
-                    )
+            # if len(objective_function) > 1:
+            #     weights_objectives = {}
+            #     for obj_fun in objective_function:
+            #         weights_objectives[obj_fun] = st.sidebar.number_input(
+            #             label=f"Choose the weight for {obj_fun}",
+            #             min_value=0.0,
+            #             max_value=1.0,
+            #             value=1 / len(objective_function),
+            #         )
 
             opt_problem = OptimizationProblem(
                 returns=univ.prices.pct_change().dropna(),
-                objective_type=ObjectiveType(objective_function[0]),
+                objective_type=ObjectiveType(objective_function),
                 constraints=[ConstraintType(constraint) for constraint in constraints],
                 regularization_weight=regularization_weight,
             )
