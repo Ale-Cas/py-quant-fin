@@ -70,43 +70,36 @@ class Portfolio:
                 cash = {assets.Cash(): 0.0}
         return cash
 
-    def get_returns(self) -> pd.DataFrame:
-        """Not yet implemented."""
-        if not self.assets_returns.empty:
-            print("Asset's returns were already provided.")
-        else:
-            for asset in self.holdings.keys():
-                self.assets_returns[asset] = asset.prices
-        return self.assets_returns
+    # def get_returns(self) -> pd.DataFrame:
+    #     """Not yet implemented."""
+    #     if not self.assets_returns.empty:
+    #         print("Asset's returns were already provided.")
+    #     else:
+    #         for asset in self.holdings.keys():
+    #             self.assets_returns[asset] = asset.prices
+    #     return self.assets_returns
 
     @property
-    def variance(self):
-        # FIXME: Like this is very slow and inefficient -> O(n^2)
-        # TODO: at least cache the property
-        ptf_var = 0
-        for col in self.assets_returns.cov().columns:
-            for row in self.assets_returns.cov().index:
-                ptf_var += (
-                    self.holdings[col]
-                    * self.assets_returns.cov()[col][row]
-                    * self.holdings[row]
-                )
-        return ptf_var
+    def returns(self) -> pd.Series:
+        assert not self.assets_returns.empty, "Asset returns must be provided."
+        temp_holdings = pd.Series(self.holdings).drop(labels=self.currency)
+        return temp_holdings @ self.assets_returns.T
+
+    @property
+    def variance(self) -> float:
+        assert not self.assets_returns.empty, "Asset returns must be provided."
+        temp_holdings = pd.Series(self.holdings).drop(labels=self.currency)
+        return temp_holdings @ self.assets_returns.cov() @ temp_holdings.T
 
     @property
     def expected_return(self) -> float:
         assert not self.assets_returns.empty, "Asset returns must be provided."
-        exp_ret = 0
-        for asset, weight in self.holdings.items():
-            if isinstance(asset, assets.Cash):
-                continue
-            else:
-                exp_ret += weight * self.assets_returns.mean()[asset.ticker]
-        return exp_ret
+        temp_holdings = pd.Series(self.holdings).drop(labels=self.currency)
+        return (temp_holdings @ self.assets_returns.mean()).sum()
 
-    # @property
-    # def sharpe_ratio(self) -> float:
-    #     pass
+    @property
+    def sharpe_ratio(self) -> float:
+        return self.expected_return / np.sqrt(self.variance)
 
     # @property
     # def mad(self) -> float:
@@ -132,9 +125,37 @@ class Portfolio:
     # def value_at_risk(self) -> float:
     #     pass
 
-    # @property
-    # def return_on_investment(self, num_holding_days: int) -> float:
-    #     pass
+    def return_on_investment(
+        self,
+        start_date: Union[pd.Timestamp, str] = str(
+            pd.Timestamp.today().date() - pd.DateOffset(years=1)
+        ),
+        holding_period: Union[pd.Timedelta, pd.DateOffset] = pd.DateOffset(years=1),
+    ) -> float:
+        """Compute Return on Investment (ROI).
+
+        Parameters
+        ----------
+        start_date: pd.Timestamp or string
+            Note: start_date is included
+            default = 1 year ago
+        holding_period: pd.Timedelta or pd.DateOffset
+            default = 1 year
+        """
+        if isinstance(start_date, str):
+            start_date = pd.Timestamp(start_date)
+        else:
+            raise ValueError("Provide a start_date in a string or pd.Timestamp format!")
+
+        roi_temp = self.returns[
+            lambda x: (x.index >= str(start_date.date()))
+            & (x.index <= str((start_date + holding_period).date()))
+        ]
+        assert not roi_temp.empty, (
+            "The specified start_date is not in the portfolio returns, "
+            + "or the holding_period is too large,"
+        )
+        return roi_temp.sum()
 
 
 class OptimalPortfolio(Portfolio):

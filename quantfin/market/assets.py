@@ -114,18 +114,22 @@ class Cash(Asset):
         return str(self.currency)
 
     def __str__(self) -> str:
-        return str(f"Cash in {self.currency}")
+        return str(self.currency)
 
     def __hash__(self) -> int:
         return hash(str(self.currency))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cash):
+            if isinstance(other, str):
+                return self.currency == other
             return NotImplemented
-        return (self.currency) == (other.currency)
+        return self.currency == other.currency
 
     def __ne__(self, other: object) -> bool:
         if not isinstance(other, Cash):
+            if isinstance(other, str):
+                return not self.currency == other
             return NotImplemented
         return not self == other
 
