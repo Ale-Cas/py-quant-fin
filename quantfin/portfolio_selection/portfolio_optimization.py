@@ -1,6 +1,6 @@
 """Module to implement optimization problems."""
 from turtle import shape
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Set
 
 import cvxopt as opt
 import numpy as np
@@ -32,7 +32,7 @@ class OptimizationModel:
         self,
         returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
+        constraints: Set[ConstraintType] = [],
         regularization_weight: float = 0.05,
         cash_pct: float = 0.0,
     ) -> None:
@@ -44,7 +44,7 @@ class OptimizationModel:
 
     def add_constraint(self, constraint: ConstraintType) -> None:
         if isinstance(constraint, ConstraintType):
-            self.constraints.append(constraint)
+            self.constraints.add(constraint)
         else:
             raise ValueError(
                 f"""The constraint type is not valid, 
