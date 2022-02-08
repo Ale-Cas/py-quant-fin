@@ -79,6 +79,7 @@ class InvestmentUniverse:
         countries: Optional[List[str]] = None,
         assets: Optional[Set[Stock]] = None,
         prices: Optional[pd.DataFrame] = None,
+        returns: Optional[pd.DataFrame] = None,
     ) -> None:
         self.name = name
         if reference_index in MarketIndex.list():
@@ -91,6 +92,7 @@ class InvestmentUniverse:
         self.countries = countries
         self.assets = assets or self.get_assets()
         self.prices = prices or pd.DataFrame()
+        self.returns = returns or pd.DataFrame()
 
     def get_assets(
         self,
@@ -145,7 +147,7 @@ class InvestmentUniverse:
             Download end date string (YYYY-MM-DD) or _datetime.
             Default is now
         group_by : str
-            Group by 'ticker' or 'column' (default)
+            Group by 'ticker' (default) or 'column'
         prepost : bool
             Include Pre and Post market data in results?
             Default is False
@@ -170,6 +172,8 @@ class InvestmentUniverse:
         prices
             A pd.DataFrame containing historical prices for the specified parameters
         """
+        if not self.prices.empty:
+            return self.prices
         if not kwargs:
             self.prices = yf.download(
                 tickers=[str(asset.ticker) for asset in self.assets],
@@ -195,3 +199,78 @@ class InvestmentUniverse:
                 self.prices = self.prices.xs(prices_column, level=1, axis=1)
 
         return self.prices
+
+    def get_returns(
+        self,
+        prices_column: str = PriceType.CLOSE,
+        required_pct_obs: float = 0.9,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """
+        Get returns from prices if prices defined,
+        otherwise get prices and then compute returns.
+        Also clean missing data.
+
+        Parameters
+        ----------
+        prices_column: Optional[str]
+            Valid columns: "Open","High","Low","Close","Volume"
+            If you want to see also "Dividends","Stock Splits"
+            Please put actions=True
+        required_pct_obs: float
+            Default is 0.9
+
+        Keyword Arguments
+        -----------------
+        period : str
+            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
+            Either Use period parameter or use start and end
+        interval : str
+            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+            Intraday data cannot extend last 60 days
+        start: str
+            Download start date string (YYYY-MM-DD) or _datetime.
+            Default is 1900-01-01
+        end: str
+            Download end date string (YYYY-MM-DD) or _datetime.
+            Default is now
+        group_by : str
+            Group by 'ticker' (default) or 'column'
+        prepost : bool
+            Include Pre and Post market data in results?
+            Default is False
+        auto_adjust: bool
+            Adjust all OHLC automatically? Default is True
+        actions: bool
+            Download dividend + stock splits data. Default is False
+        threads: bool / int
+            How many threads to use for mass downloading. Default is True
+        proxy: str
+            Optional. Proxy server URL scheme. Default is None
+        rounding: bool
+            Optional. Round values to 2 decimal places?
+        show_errors: bool
+            Optional. Doesn't print errors if True
+        timeout: None or float
+            If not None stops waiting for a response after given number of
+            seconds. (Can also be a fraction of a second e.g. 0.01)
+
+        Returns
+        -------
+        prices
+            A pd.DataFrame containing historical prices for the specified parameters
+        """
+        if not self.returns.empty:
+            return self.returns
+        if not self.prices.empty and isinstance(self.prices, pd.DataFrame):
+            returns: pd.DataFrame = self.prices.pct_change()
+            self.returns = returns.dropna(
+                axis=1, thresh=int(len(returns) * required_pct_obs)
+            ).fillna(0.0)
+            return self.returns
+        self.prices = self.get_prices(prices_column=prices_column, **kwargs)
+        returns: pd.DataFrame = self.prices.pct_change().iloc[1:, :]
+        self.returns = returns.dropna(
+            axis=1, thresh=int(len(returns) * required_pct_obs)
+        ).fillna(0.0)
+        return self.returns

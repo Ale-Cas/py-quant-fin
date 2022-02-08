@@ -1,6 +1,5 @@
 """Module to implement optimization problems."""
-from turtle import shape
-from typing import Dict, List, Set
+from typing import Dict, Set, Optional
 
 import cvxopt as opt
 import numpy as np
@@ -30,21 +29,25 @@ class OptimizationModel:
 
     def __init__(
         self,
-        returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: Set[ConstraintType] = [],
+        constraints: Optional[Set[ConstraintType]] = None,
+        returns: pd.DataFrame = pd.DataFrame(),
         regularization_weight: float = 0.05,
         cash_pct: float = 0.0,
     ) -> None:
-        self.returns = returns
         self.objective_type = objective_type
         self.constraints = constraints
+        self.returns = returns
         self.regularization_weight = regularization_weight
         self.cash_pct = cash_pct
 
     def add_constraint(self, constraint: ConstraintType) -> None:
         if isinstance(constraint, ConstraintType):
+            if not self.constraints:
+                self.constraints = set()
             self.constraints.add(constraint)
+            # update constraints dict:
+            self.constraints_dict = self.get_constraints()
         else:
             raise ValueError(
                 f"""The constraint type is not valid, 
@@ -61,7 +64,7 @@ class OptimizationModel:
 
     @property
     def objective_function(self) -> Dict[str, np.ndarray]:
-        objective_dict = {}
+        objective_dict: Dict[str, np.ndarray] = {}
         objective_dict["Linear"] = np.zeros(self.num_assets)
         objective_dict["Quadratic"] = (
             np.eye(len(objective_dict["Linear"])) * self.regularization_weight
@@ -70,7 +73,7 @@ class OptimizationModel:
 
     def get_constraints(self) -> Dict[str, np.ndarray]:
         """Computes the constraints and returns them in a dictionary."""
-        constraints_dict = {}
+        constraints_dict: Dict[str, np.ndarray] = {}
         A_budget = np.hstack(
             (
                 np.ones(self.num_assets),
@@ -81,24 +84,26 @@ class OptimizationModel:
         constraints_dict["b_budget"] = (1.0 - self.cash_pct) * np.ones(
             1
         )  # to make mypy happy
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
+        if self.constraints:
+            if ConstraintType.NO_SHORTSELLING in self.constraints:
 
-            G_no_short = np.concatenate(
-                (
-                    -np.eye(self.num_assets),
-                    np.zeros(
-                        (
-                            self.num_assets,
-                            len(self.objective_function["Linear"]) - self.num_assets,
-                        )
+                G_no_short = np.concatenate(
+                    (
+                        -np.eye(self.num_assets),
+                        np.zeros(
+                            (
+                                self.num_assets,
+                                len(self.objective_function["Linear"]) - self.num_assets,
+                            )
+                        ),
                     ),
-                ),
-                axis=1,
-            )
-            h_no_short = np.zeros(self.num_assets)
-            constraints_dict["G_inequality"] = G_no_short
-            constraints_dict["h_inequality"] = h_no_short
-        return constraints_dict
+                    axis=1,
+                )
+                h_no_short = np.zeros(self.num_assets)
+                constraints_dict["G_inequality"] = G_no_short
+                constraints_dict["h_inequality"] = h_no_short
+        self.constraints_dict = constraints_dict
+        return self.constraints_dict
 
     def solve(self) -> OptimalPortfolio:
         """Solves the following optimization problem.
@@ -125,9 +130,9 @@ class OptimizationModel:
             A=constraints_matrices["A_budget"],
             b=constraints_matrices["b_budget"],
         )
-        if (
-            ConstraintType.NO_SHORTSELLING not in self.constraints
-            and self.objective_type == ObjectiveType.VARIANCE
+        if self.objective_type == ObjectiveType.VARIANCE and (
+            not self.constraints
+            or ConstraintType.NO_SHORTSELLING not in self.constraints
         ):
             solution = opt.solvers.qp(
                 P=objectives_matrices["Quadratic"],
@@ -162,14 +167,14 @@ class MeanVariance(OptimizationModel):
 
     def __init__(
         self,
-        returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
+        constraints: Optional[Set[ConstraintType]] = None,
+        returns: pd.DataFrame = pd.DataFrame(),
         regularization_weight: float = 0.05,
         cash_pct: float = 0,
     ) -> None:
         super().__init__(
-            returns, objective_type, constraints, regularization_weight, cash_pct
+            objective_type, constraints, returns, regularization_weight, cash_pct
         )
 
     @property
@@ -193,13 +198,14 @@ class MeanVariance(OptimizationModel):
         constraints_dict = super().get_constraints()
         # The Mean-Variance model has a different definition of the A_budget matrix
         constraints_dict["A_budget"] = np.ones(shape=(1, self.num_assets))
-
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            # Inequality constraint G * x <= h
-            constraints_dict["G_inequality"] = -np.eye(self.num_assets)
-
+        if self.constraints:
+            if ConstraintType.NO_SHORTSELLING in self.constraints:
+                # Inequality constraint G * x <= h
+                constraints_dict["G_inequality"] = -np.eye(self.num_assets)
+                self.constraints_dict = constraints_dict
+        self.constraints_dict = constraints_dict
         # TODO: #10 Add other constraints
-        return constraints_dict
+        return self.constraints_dict
 
 
 class MeanMAD(OptimizationModel):
@@ -207,14 +213,14 @@ class MeanMAD(OptimizationModel):
 
     def __init__(
         self,
-        returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
+        constraints: Optional[Set[ConstraintType]] = None,
+        returns: pd.DataFrame = pd.DataFrame(),
         regularization_weight: float = 0.05,
         cash_pct: float = 0,
     ) -> None:
         super().__init__(
-            returns, objective_type, constraints, regularization_weight, cash_pct
+            objective_type, constraints, returns, regularization_weight, cash_pct
         )
 
     @property
@@ -241,7 +247,6 @@ class MeanMAD(OptimizationModel):
     def get_constraints(self) -> Dict[str, np.ndarray]:
         """Get the constraints and computes them."""
         constraints_dict = super().get_constraints()
-        # FIXME: #11 Implement MAD constraints
         mean_mat = np.tile(self.returns.mean(), (self.num_obs, 1))
         mad_ge = np.concatenate(
             (
@@ -265,21 +270,23 @@ class MeanMAD(OptimizationModel):
             axis=1,
         )
         h_mad = np.zeros(3 * self.num_obs)
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            constraints_dict["G_inequality"] = np.concatenate(
-                (
-                    mad_ge,
-                    mad_le,
-                    positive_abs_dev,
-                    super().get_constraints()["G_inequality"],
+        if self.constraints:
+            if ConstraintType.NO_SHORTSELLING in self.constraints:
+                constraints_dict["G_inequality"] = np.concatenate(
+                    (
+                        mad_ge,
+                        mad_le,
+                        positive_abs_dev,
+                        super().get_constraints()["G_inequality"],
+                    )
                 )
-            )
-            constraints_dict["h_inequality"] = np.hstack(
-                (
-                    h_mad,
-                    super().get_constraints()["h_inequality"],
+                constraints_dict["h_inequality"] = np.hstack(
+                    (
+                        h_mad,
+                        super().get_constraints()["h_inequality"],
+                    )
                 )
-            )
+                self.constraints_dict = constraints_dict
         else:
             constraints_dict["G_inequality"] = np.concatenate(
                 (
@@ -289,9 +296,9 @@ class MeanMAD(OptimizationModel):
                 )
             )
             constraints_dict["h_inequality"] = h_mad
-
+            self.constraints_dict = constraints_dict
         # TODO: #10 Add other constraints
-        return constraints_dict
+        return self.constraints_dict
 
 
 class MeanCVaR(OptimizationModel):
@@ -299,15 +306,15 @@ class MeanCVaR(OptimizationModel):
 
     def __init__(
         self,
-        returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
+        constraints: Optional[Set[ConstraintType]] = None,
+        returns: pd.DataFrame = pd.DataFrame(),
         regularization_weight: float = 0.05,
         cash_pct: float = 0,
-        confidence_level: float = 0.05,
+        confidence_level: float = (0.05,),
     ) -> None:
         super().__init__(
-            returns, objective_type, constraints, regularization_weight, cash_pct
+            objective_type, constraints, returns, regularization_weight, cash_pct
         )
         self.confidence_level = confidence_level
 
@@ -353,20 +360,22 @@ class MeanCVaR(OptimizationModel):
             axis=1,
         )
         h_cvar = np.zeros(2 * self.num_obs)
-        if ConstraintType.NO_SHORTSELLING in self.constraints:
-            constraints_dict["G_inequality"] = np.concatenate(
-                (
-                    cvar_ge,
-                    positive_dev_from_zeta,
-                    super().get_constraints()["G_inequality"],
+        if self.constraints:
+            if ConstraintType.NO_SHORTSELLING in self.constraints:
+                constraints_dict["G_inequality"] = np.concatenate(
+                    (
+                        cvar_ge,
+                        positive_dev_from_zeta,
+                        super().get_constraints()["G_inequality"],
+                    )
                 )
-            )
-            constraints_dict["h_inequality"] = np.hstack(
-                (
-                    h_cvar,
-                    super().get_constraints()["h_inequality"],
+                constraints_dict["h_inequality"] = np.hstack(
+                    (
+                        h_cvar,
+                        super().get_constraints()["h_inequality"],
+                    )
                 )
-            )
+                self.constraints_dict = constraints_dict
         else:
             constraints_dict["G_inequality"] = np.concatenate(
                 (
@@ -375,8 +384,9 @@ class MeanCVaR(OptimizationModel):
                 )
             )
             constraints_dict["h_inequality"] = h_cvar
+            self.constraints_dict = constraints_dict
         # TODO: #10 Add other constraints
-        return constraints_dict
+        return self.constraints_dict
 
 
 class OptimizationProblem(OptimizationModel):
@@ -384,16 +394,17 @@ class OptimizationProblem(OptimizationModel):
 
     def __init__(
         self,
-        returns: pd.DataFrame,
         objective_type: ObjectiveType,
-        constraints: List[ConstraintType] = [],
+        constraints: Optional[Set[ConstraintType]] = None,
+        returns: pd.DataFrame = pd.DataFrame(),
         regularization_weight: float = 0.05,
-        cash_pct: float = 0.0,
-        confidence_level: float = 0.05,
+        cash_pct: float = 0,
+        confidence_level: float = (0.05,),
     ) -> None:
         super().__init__(
-            returns, objective_type, constraints, regularization_weight, cash_pct
+            objective_type, constraints, returns, regularization_weight, cash_pct
         )
+        self.confidence_level = confidence_level
         if self.objective_type == ObjectiveType.VARIANCE:
             self.model = MeanVariance(  # type: ignore
                 returns=self.returns,
