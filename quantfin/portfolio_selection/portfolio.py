@@ -168,7 +168,8 @@ class OptimalPortfolio(Portfolio):
         default is True
     holdings : dict, optional
 
-    objective_function : str, optional
+    optimization_model : str, optional
+        The name of the optimization model that has been solved to obtain this portfolio
 
     start_holding_date pd.Timestamp, optional
     """
@@ -180,9 +181,9 @@ class OptimalPortfolio(Portfolio):
         currency: assets.Currency = assets.Currency.EUR,
         holdings: Optional[Dict[assets.Asset, float]] = None,
         assets_returns: Optional[pd.DataFrame] = None,
-        objective_function: Optional[str] = None,
+        optimization_model_name: Optional[str] = None,
         start_holding_date: Optional[pd.Timestamp] = None,
     ):
         super().__init__(name, long_only, currency, holdings, assets_returns)
-        self.objective_function = objective_function
+        self.optimization_model_name = optimization_model_name
         self.start_holding_date = start_holding_date

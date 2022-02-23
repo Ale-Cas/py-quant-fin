@@ -18,10 +18,10 @@ from quantfin.market.investment_universe import (
     PriceType,
 )
 from quantfin.market.assets import AssetClasses
-from quantfin.portfolio_selection.strategies import PortfolioStrategies
+from quantfin.portfolio_selection.strategy import PortfolioStrategies
 from quantfin.portfolio_selection.portfolio_optimization import (
-    ConstraintType,
-    ObjectiveType,
+    Constraint,
+    OptimizationModel,
     OptimizationProblem,
 )
 
@@ -109,73 +109,56 @@ def app() -> None:
         )
         if ptf_strategy == "Portfolio Optimization":
 
-            objective_function = st.selectbox(
+            subcls = {cls.__name__: cls for cls in OptimizationModel.__subclasses__()}
+            optimization_model = st.selectbox(
                 label="Choose the optimization model",
-                options=ObjectiveType.list(),
+                options=list(subcls.keys()),
             )
-            risk_appetite = st.sidebar.number_input(
-                label="Choose a level of risk appetite", min_value=0.0, max_value=1.0
-            )
+            # risk_appetite = st.sidebar.number_input(
+            #     label="Choose a level of risk appetite", min_value=0.0, max_value=1.0
+            # )
             constraints = st.sidebar.multiselect(
                 label="Choose the constraints you prefer",
-                default=ConstraintType.NO_SHORTSELLING.value,
-                options=ConstraintType.list(),
+                default=Constraint.NO_SHORTSELLING.value,
+                options=Constraint.list(),
             )
-            if "Max Instrument Weight" in constraints:
-                _for_all_assets = st.sidebar.checkbox(
-                    label="Apply to all assets", value=True
-                )
-                if _for_all_assets:
-                    max_weight_for_all_assets = st.sidebar.number_input(
-                        label="Choose a maximum weight",
-                        min_value=0.0,
-                        max_value=1.0,
-                        value=0.5,
-                    )
-                else:
-                    raise NotImplementedError
-            regularization_weight = st.sidebar.number_input(
-                label="Choose a level of regularization",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.1,
-            )
-            with st.expander("See explanation"):
-                if objective_function == ObjectiveType.VARIANCE.value:
-                    st.write(
-                        """
-                    The Portfolio Variance measures the squared distance of portfolio returns from the mean.
-                """
-                    )
-                if objective_function == ObjectiveType.MAD.value:
-                    st.write(
-                        """
-                    The Portfolio MAD measures the absolute deviation of portfolio returns from the mean.
-                """
-                    )
-                if objective_function == ObjectiveType.CVAR.value:
-                    st.write(
-                        """
-                    The Portfolio Conditional Value-at-Risk measures the expected portfolio loss at a certain confidence level.
-                """
-                    )
-            # if len(objective_function) > 1:
-            #     weights_objectives = {}
-            #     for obj_fun in objective_function:
-            #         weights_objectives[obj_fun] = st.sidebar.number_input(
-            #             label=f"Choose the weight for {obj_fun}",
-            #             min_value=0.0,
-            #             max_value=1.0,
-            #             value=1 / len(objective_function),
-            #         )
 
+            model = subcls[optimization_model]
+            opt_model = model(constraints=constraints)
             opt_problem = OptimizationProblem(
-                returns=univ.prices.pct_change().dropna(),
-                objective_type=ObjectiveType(objective_function),
-                constraints=[ConstraintType(constraint) for constraint in constraints],
-                regularization_weight=regularization_weight,
+                optimization_model=opt_model, investment_universe=univ
             )
+            with st.expander("See model explanation"):
+                if optimization_model == "MeanVariance":
+                    st.write(
+                        """
+                    The Mean-Variance model was developed by Harry Markovitz in 1952-1959. 
+                    It finds an optimal portfolio according to trade-off between the expected return
+                    and the variance. 
+                    The Portfolio Variance measures the squared distance of portfolio returns from the mean.
+                    """
+                    )
+                if optimization_model == "MeanMAD":
+                    st.write(
+                        """
+                    The Mean-MAD model was developed by Young. 
+                    It finds an optimal portfolio according to trade-off between the expected return
+                    and the Mean Absolute Deviation (MAD). 
+                    The Portfolio MAD measures the absolute deviation of portfolio returns from the mean.
+                    """
+                    )
+                if optimization_model == "MeanCVaR":
+                    st.write(
+                        """
+                    The Mean-MAD model was developed by Uryasev and Checklov. 
+                    It finds an optimal portfolio according to trade-off between the expected return
+                    and the Conditional Value-at-Risk (CVaR). 
+                    The Portfolio CVaR measures the expected portfolio loss at a certain confidence level.
+                    """
+                    )
             opt_ptf = opt_problem.solve()
+        else:
+            raise NotImplementedError
 
     st.write(
         """
