@@ -124,7 +124,9 @@ def app() -> None:
             )
 
             model = subcls[optimization_model]
-            opt_model = model(constraints=constraints)
+            opt_model = model(
+                constraints={Constraint(constraint) for constraint in constraints}
+            )
             opt_problem = OptimizationProblem(
                 optimization_model=opt_model, investment_universe=univ
             )
