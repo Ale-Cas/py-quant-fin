@@ -7,9 +7,10 @@ This module provides the streamlit UI to build your customized portfolio.
 from datetime import date
 from typing import Optional
 from dateutil.relativedelta import relativedelta
-import pandas as pd
 
-import plotly.graph_objects as go
+import numpy as np
+import pandas as pd
+import altair as alt
 import streamlit as st
 
 from quantfin.market.investment_universe import (
@@ -152,7 +153,7 @@ def app() -> None:
                 if optimization_model == "MeanCVaR":
                     st.write(
                         """
-                    The Mean-MAD model was developed by Uryasev and Checklov. 
+                    The Mean-CVaR model was developed by Uryasev and Checklov. 
                     It finds an optimal portfolio according to trade-off between the expected return
                     and the Conditional Value-at-Risk (CVaR). 
                     The Portfolio CVaR measures the expected portfolio loss at a certain confidence level.
@@ -169,26 +170,22 @@ def app() -> None:
              Here you can see the asset allocation:
              """
     )
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=[str(key) for key in opt_ptf.nonzero_holdings.keys()],
-            y=list(opt_ptf.nonzero_holdings.values()),
+
+    bar_chart = (
+        alt.Chart(
+            pd.DataFrame(
+                {
+                    "Assets": [
+                        str(stock.ticker) for stock in opt_ptf.nonzero_holdings.keys()
+                    ],
+                    "Weights": opt_ptf.nonzero_holdings.values(),
+                }
+            )
         )
+        .mark_bar()
+        .encode(x="Assets", y="Weights")
     )
-    st.plotly_chart(fig)
-    # allocation = plt.bar(
-    #     [str(key) for key in opt_ptf.nonzero_holdings.keys()],
-    #     opt_ptf.nonzero_holdings.values(),
-    # )
-    # st.pyplot(fig=allocation)
-    # st.bar_chart(
-    #     data=pd.DataFrame(
-    #         opt_ptf.nonzero_holdings,
-    #         index=[1],
-    #         columns=[str(key) for key in opt_ptf.nonzero_holdings.keys()],
-    #     )
-    # )
+    st.altair_chart(bar_chart, use_container_width=True)
 
     st.write(
         """
