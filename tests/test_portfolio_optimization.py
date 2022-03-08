@@ -1,60 +1,114 @@
 """
 Test portfolio optimization module.
 """
+import pytest
+
 from quantfin.market.investment_universe import InvestmentUniverse
 from quantfin.portfolio_selection.portfolio_optimization import (
-    ObjectiveType,
-    ConstraintType,
+    MeanCVaR,
+    MeanMAD,
+    MeanVariance,
+    Constraint,
     OptimizationProblem,
 )
 
 
-def test_min_variance() -> None:
-    univ = InvestmentUniverse(reference_index="NASDAQ 100")
-    rets = univ.get_prices(prices_column="Close").pct_change().dropna()
+@pytest.fixture(scope="module")
+def nasdaq_inv_univ() -> InvestmentUniverse:
+    nasdaq = InvestmentUniverse(reference_index="NASDAQ 100")
+    nasdaq.returns = nasdaq.get_returns()
+    return nasdaq
+
+
+@pytest.fixture(scope="module")
+def custom_inv_univ() -> InvestmentUniverse:
+    cst_tickers = ["AAPL", "GOOG", "IBM", "MSFT", "TSLA"]
+    univ = InvestmentUniverse(tickers=cst_tickers)
+    start_date = "2019-01-20"
+    end_date = "2021-11-20"
+    univ.get_returns(price_type="Close", start=start_date, end=end_date)
+    return univ
+
+
+def test_min_variance_with_custom_tickers(custom_inv_univ: InvestmentUniverse) -> None:
     min_variance = OptimizationProblem(
-        returns=rets,
-        objective_type=ObjectiveType.VARIANCE,
-        constraints=[ConstraintType.NO_SHORTSELLING],
-        regularization_weight=0.15,
+        optimization_model=MeanVariance(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=custom_inv_univ,
     )
     min_variance_portfolio = min_variance.solve()
     assert min_variance_portfolio
+    assert min(min_variance_portfolio.holdings.values()) == 0
 
 
-def test_add_constraint() -> None:
-    univ = InvestmentUniverse(reference_index="NASDAQ 100")
-    rets = univ.get_prices(prices_column="Close").pct_change().dropna()
+def test_min_variance(nasdaq_inv_univ: InvestmentUniverse) -> None:
     min_variance = OptimizationProblem(
-        returns=rets,
-        objective_type=ObjectiveType.VARIANCE,
+        optimization_model=MeanVariance(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=nasdaq_inv_univ,
     )
-    min_variance.add_constraint(constraint=ConstraintType.NO_SHORTSELLING)
     min_variance_portfolio = min_variance.solve()
     assert min_variance_portfolio
+    assert min(min_variance_portfolio.holdings.values()) == 0
 
 
-def test_mad() -> None:
-    univ = InvestmentUniverse(reference_index="NASDAQ 100")
-    rets = univ.get_prices(prices_column="Close").pct_change().dropna()
+def test_add_constraint(custom_inv_univ: InvestmentUniverse) -> None:
+    model = MeanVariance()
+    model.add_constraint(Constraint.NO_SHORTSELLING)
+    min_variance = OptimizationProblem(
+        optimization_model=model,
+        investment_universe=custom_inv_univ,
+    )
+    min_variance_portfolio = min_variance.solve()
+    assert min_variance_portfolio
+    assert min(min_variance_portfolio.holdings.values()) == 0
+
+
+def test_mad_with_custom_tickers(custom_inv_univ: InvestmentUniverse) -> None:
     min_mad = OptimizationProblem(
-        returns=rets,
-        objective_type=ObjectiveType.MAD,
-        constraints=[ConstraintType.NO_SHORTSELLING],
-        regularization_weight=0.15,
+        optimization_model=MeanMAD(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=custom_inv_univ,
     )
     min_mad_portfolio = min_mad.solve()
     assert min_mad_portfolio
+    assert min(min_mad_portfolio.holdings.values()) == 0
 
 
-def test_cvar() -> None:
-    univ = InvestmentUniverse(reference_index="NASDAQ 100")
-    rets = univ.get_prices(prices_column="Close").pct_change().dropna()
+def test_mad(nasdaq_inv_univ: InvestmentUniverse) -> None:
+    min_mad = OptimizationProblem(
+        optimization_model=MeanMAD(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=nasdaq_inv_univ,
+    )
+    min_mad_portfolio = min_mad.solve()
+    assert min_mad_portfolio
+    assert min(min_mad_portfolio.holdings.values()) == 0
+
+
+def test_cvar_with_custom_tickers(custom_inv_univ: InvestmentUniverse) -> None:
     min_cvar = OptimizationProblem(
-        returns=rets,
-        objective_type=ObjectiveType.CVAR,
-        constraints=[ConstraintType.NO_SHORTSELLING],
-        regularization_weight=0.1,
+        optimization_model=MeanCVaR(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=custom_inv_univ,
     )
     min_cvar_portfolio = min_cvar.solve()
     assert min_cvar_portfolio
+    assert min(min_cvar_portfolio.holdings.values()) == 0
+
+
+def test_cvar_nasdaq(nasdaq_inv_univ: InvestmentUniverse) -> None:
+    min_cvar = OptimizationProblem(
+        optimization_model=MeanCVaR(
+            constraints={Constraint.NO_SHORTSELLING},
+        ),
+        investment_universe=nasdaq_inv_univ,
+    )
+    min_cvar_portfolio = min_cvar.solve()
+    assert min_cvar_portfolio
+    assert min(min_cvar_portfolio.holdings.values()) == 0
