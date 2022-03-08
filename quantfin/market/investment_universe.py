@@ -74,8 +74,8 @@ class InvestmentUniverse:
         self,
         name: Optional[str] = None,
         reference_index: Optional[Union[str, MarketIndex]] = None,
-        tickers: Union[str, Set[str], List[str]] = None,
-        assets: Optional[Set[Asset]] = None,
+        tickers: Optional[Union[str, Set[str], List[str]]] = None,
+        assets: Optional[Union[Set[Asset], List[Asset]]] = None,
         bars: Optional[pd.DataFrame] = None,
         prices: Optional[pd.DataFrame] = None,
         returns: Optional[pd.DataFrame] = None,
@@ -87,14 +87,14 @@ class InvestmentUniverse:
                 self.reference_index in MarketIndex.list()
             ), f"""Inappropriate universe name, 
                  supported universe names are: {", ".join(MarketIndex.list())}"""
-        if tickers is not None:
-            self._tickers = set(tickers)
-        else:
+        if tickers is None:
             self._tickers = tickers
-        if assets is not None:
-            self._assets = set(assets)
         else:
+            self._tickers = set(tickers)
+        if assets is None:
             self._assets = assets
+        else:
+            self._assets = set(assets)
         self._bars = bars or pd.DataFrame()
         self._prices = prices or pd.DataFrame()
         self._returns = returns or pd.DataFrame()
@@ -124,8 +124,14 @@ class InvestmentUniverse:
         return self._tickers
 
     def set_tickers(self, tickers: Union[str, Set[str], List[str]]) -> None:
+        """Set tickers in investment universe.
+
+        Parameters
+        ----------
+            tickers: Union[str, Set[str], List[str]]
+        """
         assert isinstance(
-            tickers, (str, Set[str], List[str])
+            tickers, (str, set, list)
         ), """
             Please provide a string, set or list of tickers.
             """
@@ -167,11 +173,17 @@ class InvestmentUniverse:
         return self._assets
 
     def set_assets(self, assets: Union[Set[Asset], List[Asset]]) -> None:
+        """Set assets in investment universe.
+
+        Parameters
+        ----------
+            assets: Union[str, Set[Asset], List[Asset]]
+        """
         for asset in assets:
             assert isinstance(
                 asset, Asset
             ), "Please provide a list or set of Asset objects."
-        self._assets = assets
+        self._assets = set(assets)
 
     assets = property(fget=get_assets, fset=set_assets)
 
@@ -241,6 +253,12 @@ class InvestmentUniverse:
         return self._bars
 
     def set_bars(self, bars: pd.DataFrame) -> None:
+        """Set OHLC bars in investment universe.
+
+        Parameters
+        ----------
+            bars: pd.DataFrame
+        """
         if isinstance(bars, pd.DataFrame):
             self._bars = bars
         else:
@@ -251,6 +269,12 @@ class InvestmentUniverse:
     def get_prices(
         self, price_type: PriceType = PriceType.CLOSE, **kwargs
     ) -> pd.DataFrame:
+        """Get prices by specifying the type of price you want.
+
+        Parameters
+        ----------
+            price_type: PriceType
+        """
         if self._prices.empty:
             assert isinstance(
                 price_type, (PriceType, str)
@@ -266,11 +290,17 @@ class InvestmentUniverse:
                 self._bars = self.get_bars(**kwargs)
             elif kwargs:
                 self._bars = self.get_bars(**kwargs)
-            self._prices: pd.DataFrame = self._bars.xs(price_type, level=1, axis=1)
+            self._prices = self._bars.xs(price_type, level=1, axis=1)
 
         return self._prices
 
     def set_prices(self, prices: pd.DataFrame) -> None:
+        """Set prices in investment universe.
+
+        Parameters
+        ----------
+            prices: pd.DataFrame
+        """
         if isinstance(prices, pd.DataFrame):
             self._prices = prices
         else:
@@ -284,6 +314,16 @@ class InvestmentUniverse:
         price_type: PriceType = PriceType.CLOSE,
         **kwargs,
     ) -> pd.DataFrame:
+        """Get returns by specifying how to clean the data
+            and the type of price you want.
+
+        Parameters
+        ----------
+            required_pct_obs: float
+                The required percentage of observations
+                to keep a certain asset in the investment universe.
+            price_type: PriceType
+        """
         if self._returns.empty:
             if self._prices.empty:
                 self._prices = self.get_prices(price_type=price_type, **kwargs)
@@ -294,6 +334,12 @@ class InvestmentUniverse:
         return self._returns
 
     def set_returns(self, returns: pd.DataFrame) -> None:
+        """Set returns in investment universe.
+
+        Parameters
+        ----------
+            returns: pd.DataFrame
+        """
         if isinstance(returns, pd.DataFrame):
             self._returns = returns
         else:
@@ -303,16 +349,28 @@ class InvestmentUniverse:
 
     @property
     def num_tot_assets(self) -> int:
+        """
+        The total number of assets in the investment universe.
+        """
         return len(self.assets)
 
     @property
     def num_ret_assets(self) -> int:
+        """
+        The number of assets with clean returns.
+        """
         return len(self.returns.columns)
 
     @property
     def num_obs_prices(self) -> int:
+        """
+        The number of observations in investment universe's prices.
+        """
         return len(self.prices.index)
 
     @property
     def num_obs_returns(self) -> int:
+        """
+        The number of observations in investment universe's returns.
+        """
         return len(self.returns.index)
