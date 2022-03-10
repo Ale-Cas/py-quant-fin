@@ -26,6 +26,7 @@ types-requests = "^2.27.7"
 pgcopy = "^1.5.0"
 seaborn = "^0.11.2"
 altair = "^4.2.0"
+bs4 = "^0.0.1"
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.12"
