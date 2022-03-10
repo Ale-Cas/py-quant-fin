@@ -3,6 +3,7 @@ The investment_universe module provides a class to instantiate investment univer
 """
 
 from __future__ import annotations
+from functools import lru_cache
 
 from typing import List, Optional, Set, Union
 
@@ -187,6 +188,7 @@ class InvestmentUniverse:
 
     assets = property(fget=get_assets, fset=set_assets)
 
+    @lru_cache
     def get_bars(
         self,
         **kwargs,
