@@ -8,7 +8,6 @@ from datetime import date
 from typing import Optional
 from dateutil.relativedelta import relativedelta
 
-import numpy as np
 import pandas as pd
 import altair as alt
 import streamlit as st

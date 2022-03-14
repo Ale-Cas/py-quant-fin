@@ -4,7 +4,6 @@ Created on Jan 13, 2022
 
 This module provides the streamlit UI to download customized stock data.
 """
-from click import option
 import streamlit as st
 import numpy as np
 import pandas as pd
