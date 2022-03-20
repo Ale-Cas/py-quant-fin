@@ -1,6 +1,9 @@
 """
 Test portfolio module.
 """
+import os
+
+os.system("/usr/bin/arch -x86_64 /bin/zsh")
 import pytest
 from quantfin.market import assets
 from quantfin.portfolio_selection import portfolio

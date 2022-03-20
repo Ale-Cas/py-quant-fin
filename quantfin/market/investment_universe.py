@@ -15,6 +15,10 @@ from bs4 import BeautifulSoup
 from quantfin.utils import ListEnum
 from quantfin.market.assets import Asset, Stock
 
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 class MarketIndex(str, ListEnum):
     """List of supported indexes."""
@@ -347,7 +351,7 @@ class InvestmentUniverse:
         else:
             raise ValueError("Prices must be a pandas DataFrame.")
 
-    returns = property(fget=get_returns, fset=set_returns)
+    returns: pd.DataFrame = property(fget=get_returns, fset=set_returns)
 
     @property
     def num_tot_assets(self) -> int:

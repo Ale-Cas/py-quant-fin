@@ -1,6 +1,9 @@
 """
 Test portfolio optimization module.
 """
+import os
+
+os.system("/usr/bin/arch -x86_64 /bin/zsh")
 import pytest
 
 from quantfin.market.investment_universe import InvestmentUniverse
@@ -11,6 +14,7 @@ from quantfin.portfolio_selection.portfolio_optimization import (
     Constraint,
     OptimizationProblem,
 )
+from quantfin.portfolio_selection.risk_parity import HierarchicalRiskParity
 
 
 @pytest.fixture(scope="module")
@@ -112,3 +116,10 @@ def test_cvar_nasdaq(nasdaq_inv_univ: InvestmentUniverse) -> None:
     min_cvar_portfolio = min_cvar.solve()
     assert min_cvar_portfolio
     assert min(min_cvar_portfolio.holdings.values()) == 0
+
+
+def test_hrp(nasdaq_inv_univ: InvestmentUniverse) -> None:
+    hrp = HierarchicalRiskParity(investment_universe=nasdaq_inv_univ)
+    hrp_ptf = hrp.compute_optimal_portfolio()
+    assert hrp_ptf
+    assert min(hrp_ptf.holdings.values()) == 0
