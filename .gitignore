@@ -1,3 +1,6 @@
+# VS Code stuff:
+.vscode/
+
 # DB Stuff
 /test_db.py
 
