@@ -1,9 +1,6 @@
 """
 Test portfolio optimization module.
 """
-import os
-
-os.system("/usr/bin/arch -x86_64 /bin/zsh")
 import pytest
 
 from quantfin.market.investment_universe import InvestmentUniverse

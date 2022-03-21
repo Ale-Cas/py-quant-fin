@@ -1,6 +1,3 @@
-import os
-
-os.system("/usr/bin/arch -x86_64 /bin/zsh")
 import pytest
 from datetime import date
 from dateutil.relativedelta import relativedelta
