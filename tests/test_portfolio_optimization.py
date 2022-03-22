@@ -116,7 +116,9 @@ def test_cvar_nasdaq(nasdaq_inv_univ: InvestmentUniverse) -> None:
 
 
 def test_hrp(nasdaq_inv_univ: InvestmentUniverse) -> None:
-    hrp = HierarchicalRiskParity(investment_universe=nasdaq_inv_univ)
+    nasdaq = InvestmentUniverse(reference_index="NASDAQ 100")
+    nasdaq.returns = nasdaq.get_returns()
+    hrp = HierarchicalRiskParity(investment_universe=nasdaq)
     hrp_ptf = hrp.compute_optimal_portfolio()
     assert hrp_ptf
     assert min(hrp_ptf.holdings.values()) == 0

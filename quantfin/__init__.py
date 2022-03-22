@@ -7,8 +7,3 @@ In the strategy module the abstract strategy interface is provided,
 while the concrete strategies are implemented in portfolio_optimization and risk_parity modules.
 
 """
-import os
-import platform
-
-if platform.system() == "Darwin" and "arm64" in platform.mac_ver():
-    os.system("/usr/bin/arch -x86_64 /bin/zsh")

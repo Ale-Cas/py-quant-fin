@@ -85,3 +85,12 @@ class HierarchicalRiskParity(RiskParity):
             holdings=self.recursive_bisection(),
             assets_returns=self.investment_universe.returns,
         )
+
+
+if __name__ == "__main__":
+    nasdaq = InvestmentUniverse(reference_index="NASDAQ 100")
+    nasdaq.returns = nasdaq.get_returns()
+    hrp = HierarchicalRiskParity(investment_universe=nasdaq)
+    hrp_ptf = hrp.compute_optimal_portfolio()
+    assert hrp_ptf
+    assert min(hrp_ptf.holdings.values()) == 0

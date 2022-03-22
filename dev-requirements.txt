@@ -1,0 +1,6 @@
+pytest >= 6.2.5
+mypy >= 0.930
+isort >= 5.10.1
+black >= 21.12b0
+pylint >= 2.12.2
+ipython >= 7.31.0

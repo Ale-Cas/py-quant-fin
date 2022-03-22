@@ -1,6 +1,9 @@
 # VS Code stuff:
 .vscode/
 
+# PyCharm stuff:
+.idea/
+
 # DB Stuff
 /test_db.py
 

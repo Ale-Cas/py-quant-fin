@@ -1,10 +1,8 @@
 """Module to implement optimization problems."""
-from dataclasses import dataclass
 from typing import Dict, Set, Optional
 
 import cvxopt as opt
 import numpy as np
-import pandas as pd
 
 from quantfin.market import assets
 from quantfin.market.investment_universe import InvestmentUniverse
